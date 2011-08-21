@@ -17,7 +17,7 @@
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(init(UserName::atom()) -> {ok, EtsPid::pid()}).
+-spec(init(UserName::atom()) -> {ok, Tid::tid()}).
 
 init(UserName) ->
     process_flag(trap_exit, true),
@@ -28,9 +28,9 @@ init(UserName) ->
         {error, eexist} -> ok
     end,
 
-    {ok, EtsPid} = create_tables(UserName),
-    restore_table(EtsPid, UserName),
-    {ok, EtsPid}.
+    {ok, Tid} = create_tables(UserName),
+    restore_table(Tid, UserName),
+    {ok, Tid}.
 
     
 %%--------------------------------------------------------------------
@@ -39,13 +39,13 @@ init(UserName) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(create_tables(Device::atom()) -> {ok, EtsPid::pid(), DetsPid::pid()}).
+-spec(create_tables(Device::atom()) -> {ok, Tid::tid(), DetsPid::pid()}).
 
 create_tables(UserName) ->  
-    EtsPid = ets:new(follower, [ordered_set, {keypos, #follower.id}]),
+    Tid = ets:new(follower, [ordered_set, {keypos, #follower.id}]),
     {DiscName, FileName} = dets_info(UserName),
     dets:open_file(DiscName, [{file, FileName}, {keypos, #follower.id}]),
-    {ok, EtsPid}.
+    {ok, Tid}.
 
 %%--------------------------------------------------------------------
 %%
@@ -53,11 +53,11 @@ create_tables(UserName) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(restore_table(EtsPid::pid(), UserName::atom()) -> ok).
+-spec(restore_table(Tid::tid(), UserName::atom()) -> ok).
 
-restore_table(EtsPid, UserName) ->
+restore_table(Tid, UserName) ->
     Insert = fun(#follower{id=_Id, datetime=_DateTime} = Follower)->
-		     ets:insert(EtsPid, Follower),
+		     ets:insert(Tid, Follower),
 		     continue
 	     end,
 
@@ -71,12 +71,12 @@ restore_table(EtsPid, UserName) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(close_tables(EtsPid::pid(), UserName::atom()) -> 
+-spec(close_tables(Tid::tid(), UserName::atom()) -> 
              ok | {error, Reason::term()}).
 
-close_tables(EtsPid, UserName) ->
+close_tables(Tid, UserName) ->
     {Dets, _} = dets_info(UserName),
-    ets:delete(EtsPid),
+    ets:delete(Tid),
     dets:close(Dets).
 
 %%--------------------------------------------------------------------
@@ -85,17 +85,17 @@ close_tables(EtsPid, UserName) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(save_follower_user(EtsPid::pid(), User::#user{}, Id::integer()) ->
+-spec(save_follower_user(Tid::tid(), User::#user{}, Id::integer()) ->
              ok | {error, already_followering}).
 
-save_follower_user(EtsPid, User, Id) ->
+save_follower_user(Tid, User, Id) ->
     Follower = #follower{id=Id, datetime={date(), time()}},
 
     case is_followering(User, Id) of
 	true -> {error, already_followering};
 	false ->
             {Dets, _} = dets_info(User#user.name),
-	    ets:insert(EtsPid, Follower),
+	    ets:insert(Tid, Follower),
 	    dets:insert(Dets, Follower),
 	    ok
     end.
@@ -106,14 +106,14 @@ save_follower_user(EtsPid, User, Id) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(delete_follower_user(EtsPid::pid(), User::#user{}, Id::integer()) -> 
+-spec(delete_follower_user(Tid::tid(), User::#user{}, Id::integer()) -> 
              {ok, deleted} | {error, not_followering}).
 
-delete_follower_user(EtsPid, User, Id) ->
-    case is_followering(EtsPid, Id) of
+delete_follower_user(Tid, User, Id) ->
+    case is_followering(Tid, Id) of
 	true ->
 	    {Dets, _} = dets_info(User#user.name),
-	    ets:delete(EtsPid, Id),
+	    ets:delete(Tid, Id),
 	    dets:delete(Dets, Id),
 	    {ok, deleted};
 	false -> {error, not_followering}
@@ -125,12 +125,12 @@ delete_follower_user(EtsPid, User, Id) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(get_follower_ids(EtsPid::pid()) -> [#follower{}]).
+-spec(get_follower_ids(Tid::tid()) -> [#follower{}]).
 
-get_follower_ids(EtsPid) ->
-    case ets:first(EtsPid) of
+get_follower_ids(Tid) ->
+    case ets:first(Tid) of
 	'$end_of_table' -> [];
-	First -> collect_id(EtsPid, First, [First])
+	First -> collect_id(Tid, First, [First])
     end.
 
 %%--------------------------------------------------------------------
@@ -139,16 +139,16 @@ get_follower_ids(EtsPid) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(map_do(EtsPid::pid(), Fun::fun()) -> ok).
+-spec(map_do(Tid::tid(), Fun::fun()) -> ok).
 
-map_do(EtsPid, Fun) ->
-    case ets:first(EtsPid) of
+map_do(Tid, Fun) ->
+    case ets:first(Tid) of
 	'$end_of_table' ->
 	    ok;
 	First ->
-	    [Follower] = ets:lookup(EtsPid, First),
+	    [Follower] = ets:lookup(Tid, First),
 	    Fun(Follower),
-	    map_do(EtsPid, Fun, First)
+	    map_do(Tid, Fun, First)
     end.
 
 %%--------------------------------------------------------------------
@@ -157,10 +157,10 @@ map_do(EtsPid, Fun) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(is_follower(EtsPid::pid(), UserId::integer()) -> true|false).
+-spec(is_follower(Tid::tid(), UserId::integer()) -> true|false).
 
-is_follower(EtsPid, UserId) ->
-    case ets:lookup(EtsPid, UserId) of
+is_follower(Tid, UserId) ->
+    case ets:lookup(Tid, UserId) of
         [_FolloweringUser] -> true;
         [] -> false
     end.
@@ -169,19 +169,19 @@ is_follower(EtsPid, UserId) ->
 %% local functions
 %%--------------------------------------------------------------------
 
--spec(collect_id(EtsPid::pid(), Before::integer(), Result::[integer()]) ->
+-spec(collect_id(Tid::tid(), Before::integer(), Result::[integer()]) ->
              [integer()]).
 
-collect_id(EtsPid, Before, Result) ->
-    case ets:next(EtsPid, Before) of
+collect_id(Tid, Before, Result) ->
+    case ets:next(Tid, Before) of
 	'$end_of_table' -> Result;
-	FollowerId -> collect_id(EtsPid, FollowerId, [FollowerId | Result])
+	FollowerId -> collect_id(Tid, FollowerId, [FollowerId | Result])
     end.	    
 
--spec(is_followering(EtsPid::pid(), Id::integer()) -> true | false).
+-spec(is_followering(Tid::tid(), Id::integer()) -> true | false).
 
-is_followering(EtsPid, Id) ->
-    case ets:lookup(EtsPid, Id) of
+is_followering(Tid, Id) ->
+    case ets:lookup(Tid, Id) of
 	[_Follower] -> true;
 	[] -> false
     end.    
@@ -194,14 +194,14 @@ dets_info(UserName)->
     FileName = DB_DIR ++ atom_to_list(UserName) ++ "follower",
     {Dets, FileName}.
 
--spec(map_do(EtsPid::pid(), Fun::fun(), Entry::integer()) -> term()).
+-spec(map_do(Tid::tid(), Fun::fun(), Entry::integer()) -> term()).
 
-map_do(EtsPid, Fun, Entry) ->
-    case ets:next(EtsPid, Entry) of
+map_do(Tid, Fun, Entry) ->
+    case ets:next(Tid, Entry) of
 	'$end_of_table' ->
 	    ok;
 	Next ->
-	    [Follower] = ets:lookup(EtsPid, Next),
+	    [Follower] = ets:lookup(Tid, Next),
 	    Fun(Follower),
-	    map_do(EtsPid, Fun, Next)
+	    map_do(Tid, Fun, Next)
     end.

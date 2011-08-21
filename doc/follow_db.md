@@ -4,12 +4,28 @@ Module follow_db
 
 <h1>Module follow_db</h1>
 
+* [Data Types](#types)
 * [Function Index](#index)
 * [Function Details](#functions)
 
 
 
 
+
+
+
+<h2><a name="types">Data Types</a></h2>
+
+
+
+
+
+<h3 class="typedecl"><a name="type-tid">tid()</a></h3>
+
+
+
+
+<pre>tid() = integer()</pre>
 
 
 <h2><a name="index">Function Index</a></h2>
@@ -32,7 +48,7 @@ Module follow_db
 
 
 
-<pre>close_tables(EtsPid::pid(), UserName::atom()) -> ok | {error, Reason::term()}</pre>
+<pre>close_tables(Tid::<a href="#type-tid">tid()</a>, UserName::atom()) -> ok | {error, Reason::term()}</pre>
 <br></br>
 
 
@@ -47,7 +63,7 @@ close ets and dets database.
 
 
 
-<pre>delete_follow_user(EtsPid::pid(), User::#user{id = undefined | integer(), status = atom(), pid = undefined | atom(), name = undefined | term(), mail = undefined | string(), password = undefined | string()}, Id::integer()) -> {ok, deleted} | {error, not_following}</pre>
+<pre>delete_follow_user(Tid::<a href="#type-tid">tid()</a>, User::#user{id = undefined | integer(), status = atom(), pid = undefined | atom(), name = undefined | term(), mail = undefined | string(), password = undefined | string()}, Id::integer()) -> {ok, deleted} | {error, not_following}</pre>
 <br></br>
 
 
@@ -62,7 +78,7 @@ delet user from follow database.
 
 
 
-<pre>get_follow_ids(EtsPid::pid()) -> [#follow{id = undefined | integer(), datetime = undefined | term()}]</pre>
+<pre>get_follow_ids(Tid::<a href="#type-tid">tid()</a>) -> [#follow{id = undefined | integer(), datetime = undefined | term()}]</pre>
 <br></br>
 
 
@@ -77,7 +93,7 @@ get all follow users id.
 
 
 
-<pre>init(UserName::atom()) -> {ok, EtsPid::pid()}</pre>
+<pre>init(UserName::atom()) -> {ok, Tid::pid()}</pre>
 <br></br>
 
 
@@ -92,7 +108,7 @@ load follow users from dets to ets.
 
 
 
-<pre>is_follow(EtsPid::pid(), UserId::integer()) -> true | false</pre>
+<pre>is_follow(Tid::<a href="#type-tid">tid()</a>, UserId::integer()) -> true | false</pre>
 <br></br>
 
 
@@ -107,7 +123,7 @@ check followin user or not.
 
 
 
-<pre>map_do(EtsPid::pid(), Fun::function()) -> ok</pre>
+<pre>map_do(Tid::<a href="#type-tid">tid()</a>, Fun::function()) -> ok</pre>
 <br></br>
 
 
@@ -122,7 +138,7 @@ do function to all users.
 
 
 
-<pre>save_follow_user(EtsPid::pid(), User::#user{id = undefined | integer(), status = atom(), pid = undefined | atom(), name = undefined | term(), mail = undefined | string(), password = undefined | string()}, Id::integer()) -> ok | {error, already_following}</pre>
+<pre>save_follow_user(Tid::<a href="#type-tid">tid()</a>, User::#user{id = undefined | integer(), status = atom(), pid = undefined | atom(), name = undefined | term(), mail = undefined | string(), password = undefined | string()}, Id::integer()) -> ok | {error, already_following}</pre>
 <br></br>
 
 
