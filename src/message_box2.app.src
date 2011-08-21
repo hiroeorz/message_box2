@@ -1,0 +1,12 @@
+{application, message_box2,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { message_box2_app, []}},
+  {env, []}
+ ]}.
