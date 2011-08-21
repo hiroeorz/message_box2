@@ -23,9 +23,6 @@
 -export([add_user/3, update_user/1, lookup_id/1, lookup_name/1, lookup_pid/1,
          map_do/1, save_pid/2, get_pid/1]).
 
-%% for test
--export([get_user_by_pid/1, map_do/2]).
-
 -define(SERVER, ?MODULE). 
 
 -record(state, {}).

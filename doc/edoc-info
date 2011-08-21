@@ -1,4 +1,4 @@
 {application,message_box2}.
 {packages,[]}.
-{modules,[follow_db,message_box2,message_box2_app,message_box2_config,
-          message_box2_sup,message_box2_user_db,util]}.
+{modules,[follow_db,follower_db,message_box2,message_box2_app,
+          message_box2_config,message_box2_sup,message_box2_user_db,util]}.

@@ -23,7 +23,7 @@ __Authors:__ Hiroe Shin ([`hiroe.orz@gmail.com`](mailto:hiroe.orz@gmail.com)).
 
 
 
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_user-3">add_user/3</a></td><td>add new user to system.</td></tr><tr><td valign="top"><a href="#get_pid-1">get_pid/1</a></td><td>lookup user pid.</td></tr><tr><td valign="top"><a href="#get_user_by_pid-1">get_user_by_pid/1</a></td><td></td></tr><tr><td valign="top"><a href="#lookup_id-1">lookup_id/1</a></td><td>lookup user from id.</td></tr><tr><td valign="top"><a href="#lookup_name-1">lookup_name/1</a></td><td>lookup user from name(string).</td></tr><tr><td valign="top"><a href="#lookup_pid-1">lookup_pid/1</a></td><td>lookup user from pid.</td></tr><tr><td valign="top"><a href="#map_do-1">map_do/1</a></td><td>exec fun to each element of user list.</td></tr><tr><td valign="top"><a href="#map_do-2">map_do/2</a></td><td></td></tr><tr><td valign="top"><a href="#save_pid-2">save_pid/2</a></td><td>save user pid.</td></tr><tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_user-3">add_user/3</a></td><td>add new user to system.</td></tr><tr><td valign="top"><a href="#get_pid-1">get_pid/1</a></td><td>lookup user pid.</td></tr><tr><td valign="top"><a href="#lookup_id-1">lookup_id/1</a></td><td>lookup user from id.</td></tr><tr><td valign="top"><a href="#lookup_name-1">lookup_name/1</a></td><td>lookup user from name(string).</td></tr><tr><td valign="top"><a href="#lookup_pid-1">lookup_pid/1</a></td><td>lookup user from pid.</td></tr><tr><td valign="top"><a href="#map_do-1">map_do/1</a></td><td>exec fun to each element of user list.</td></tr><tr><td valign="top"><a href="#save_pid-2">save_pid/2</a></td><td>save user pid.</td></tr><tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td>
 Starts the server.</td></tr><tr><td valign="top"><a href="#update_user-1">update_user/1</a></td><td>add new user to system.</td></tr></table>
 
 
@@ -62,18 +62,6 @@ add new user to system.
 
 
 lookup user pid.
-<a name="get_user_by_pid-1"></a>
-
-<h3>get_user_by_pid/1</h3>
-
-
-
-
-
-<pre>get_user_by_pid(Pid::pid()) -> #user{id = undefined | integer(), status = atom(), pid = undefined | atom(), name = undefined | term(), mail = undefined | string(), password = undefined | string()}</pre>
-<br></br>
-
-
 <a name="lookup_id-1"></a>
 
 <h3>lookup_id/1</h3>
@@ -134,16 +122,6 @@ lookup user from pid.
 
 
 exec fun to each element of user list.
-<a name="map_do-2"></a>
-
-<h3>map_do/2</h3>
-
-
-
-
-
-`map_do(Fun, Entry) -> any()`
-
 <a name="save_pid-2"></a>
 
 <h3>save_pid/2</h3>
