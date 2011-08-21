@@ -18,5 +18,6 @@ The message_box2 application
 <tr><td><a href="message_box2_config.md" class="module">message_box2_config</a></td></tr>
 <tr><td><a href="message_box2_sup.md" class="module">message_box2_sup</a></td></tr>
 <tr><td><a href="message_box2_user_db.md" class="module">message_box2_user_db</a></td></tr>
+<tr><td><a href="message_db.md" class="module">message_db</a></td></tr>
 <tr><td><a href="util.md" class="module">util</a></td></tr></table>
 

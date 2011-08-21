@@ -178,7 +178,7 @@ if added Text is replay message.return {true, #usr{}} orelse {false, nil}
 
 
 
-`shurink_ets(Device, MaxCount) -> any()`
+`shurink_ets(Tid, MaxCount) -> any()`
 
 
 

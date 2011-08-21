@@ -194,22 +194,22 @@ icon_path(Name) when is_atom(Name) ->
 %%
 %% @doc ets shurink function
 %%
-shurink_ets(Device, MaxCount) ->
-    case ets:first(Device) of
+shurink_ets(Tid, MaxCount) ->
+    case ets:first(Tid) of
         '$end_of_table' -> 
             ok;
         First ->
-            shurink_ets(Device, MaxCount, First, 1)
+            shurink_ets(Tid, MaxCount, First, 1)
     end.
 
-shurink_ets(Device, MaxCount, Index, Count) ->
-    case ets:next(Device, Index) of
+shurink_ets(Tid, MaxCount, Index, Count) ->
+    case ets:next(Tid, Index) of
         '$end_of_table' -> 
             ok;
         Next ->
-            if Count > MaxCount -> ets:delete(Device, Next);
+            if Count > MaxCount -> ets:delete(Tid, Next);
                true -> ok
             end,
-            shurink_ets(Device, MaxCount, Next, Count + 1)
+            shurink_ets(Tid, MaxCount, Next, Count + 1)
     end.
 
