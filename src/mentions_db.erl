@@ -13,15 +13,28 @@
 %% for test
 -export([insert_message_to_sqlite3/2]).
 
+%%--------------------------------------------------------------------
+%% @private
+%%
+%% @doc get message id list from local ets and sqlite3 database.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(init(DBPid::pid()) -> {ok, Tid::tid()}).
+
 init(DBPid)->
     {ok, Tid} = create_tables(DBPid),
     restore_table(DBPid, Tid),
     {ok, Tid}.    
 
+-spec(create_tables(DBPid::pid()) -> {ok, Tid::tid()}).
+
 create_tables(DBPid)->  
     Tid = ets:new(mentions_db, [ordered_set, {keypos, #message_index.id}]),
     ok = create_sqlite3_tables(DBPid),
     {ok, Tid}.
+
+-spec(create_sqlite3_tables(DBPid::pid()) -> ok).
 
 create_sqlite3_tables(DBPid) ->
     case lists:member(mentions, sqlite3:list_tables(DBPid)) of
@@ -32,6 +45,8 @@ create_sqlite3_tables(DBPid) ->
                                 id INTEGER PRIMARY KEY,
                                 message_id INTEGER NOT NULL)")
     end.
+
+-spec(restore_table(DBPid::pid(), Tid::tid()) -> ok).
 
 restore_table(DBPid, Tid)->
     MessageMaxSizeOnMemory = 
@@ -44,6 +59,8 @@ restore_table(DBPid, Tid)->
     Records = parse_message_records(SqlResults),
     restore_records(Tid, Records).
 
+-spec(restore_records(Tid::tid(), Records::[term()]) -> ok).
+
 restore_records(Tid, Records) ->
     case Records of
 	[] -> ok;
@@ -52,6 +69,13 @@ restore_records(Tid, Records) ->
 	    restore_records(Tid, Tail)
     end.
 
+%%--------------------------------------------------------------------
+%% @private
+%%
+%% @doc save message to database.
+%%
+%% @end
+%%--------------------------------------------------------------------
 -spec(save_message_id(Tid::tid(), DBPid::pid(), MessageId::integer()) -> 
              {ok, MessageId::integer()}).
 
@@ -66,6 +90,15 @@ save_message_id(Tid, DBPid, MessageId) ->
     insert_message_to_sqlite3(DBPid, MessageIndex),
     util:shurink_ets(Tid, MessageMaxSizeOnMemory),
     {ok, MessageId}.
+
+%%--------------------------------------------------------------------
+%% @private
+%%
+%% @doc get timeline list.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(get_timeline(Tid::tid(), DBPid::pid(), Count::integer()) -> [#message{}]).
 
 get_timeline(Tid, DBPid, Count) ->
     Pid = self(),
