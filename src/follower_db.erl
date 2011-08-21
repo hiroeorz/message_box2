@@ -1,19 +1,19 @@
 %% File : follow_db.erl
 %% Description : user follow relationship database.
 
--module(follow_db).
+-module(follower_db).
 -include_lib("eunit/include/eunit.hrl").
 -include("../include/message_box.hrl").
 -include("../include/message.hrl").
 -include("../include/user.hrl").
 
 -export([init/1]).
--export([close_tables/2, save_follow_user/3, delete_follow_user/3,
-        get_follow_ids/1, map_do/2, is_follow/2]).
+-export([close_tables/2, save_follower_user/3, delete_follower_user/3,
+        get_follower_ids/1, map_do/2, is_follower/2]).
 
 %%--------------------------------------------------------------------
 %%
-%% @doc load follow users from dets to ets.
+%% @doc load follower users from dets to ets.
 %%
 %% @end
 %%--------------------------------------------------------------------
@@ -42,22 +42,22 @@ init(UserName) ->
 -spec(create_tables(Device::atom()) -> {ok, EtsPid::pid(), DetsPid::pid()}).
 
 create_tables(UserName) ->  
-    EtsPid = ets:new(follow, [ordered_set, {keypos, #follow.id}]),
+    EtsPid = ets:new(follower, [ordered_set, {keypos, #follower.id}]),
     {DiscName, FileName} = dets_info(UserName),
-    dets:open_file(DiscName, [{file, FileName}, {keypos, #follow.id}]),
+    dets:open_file(DiscName, [{file, FileName}, {keypos, #follower.id}]),
     {ok, EtsPid}.
 
 %%--------------------------------------------------------------------
 %%
-%% @doc load follow users from dets to ets.
+%% @doc load follower users from dets to ets.
 %%
 %% @end
 %%--------------------------------------------------------------------
 -spec(restore_table(EtsPid::pid(), UserName::atom()) -> ok).
 
 restore_table(EtsPid, UserName) ->
-    Insert = fun(#follow{id=_Id, datetime=_DateTime} = Follow)->
-		     ets:insert(EtsPid, Follow),
+    Insert = fun(#follower{id=_Id, datetime=_DateTime} = Follower)->
+		     ets:insert(EtsPid, Follower),
 		     continue
 	     end,
 
@@ -81,53 +81,53 @@ close_tables(EtsPid, UserName) ->
 
 %%--------------------------------------------------------------------
 %%
-%% @doc save user to follow database.
+%% @doc save user to follower database.
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(save_follow_user(EtsPid::pid(), User::#user{}, Id::integer()) ->
-             ok | {error, already_following}).
+-spec(save_follower_user(EtsPid::pid(), User::#user{}, Id::integer()) ->
+             ok | {error, already_followering}).
 
-save_follow_user(EtsPid, User, Id) ->
-    Follow = #follow{id=Id, datetime={date(), time()}},
+save_follower_user(EtsPid, User, Id) ->
+    Follower = #follower{id=Id, datetime={date(), time()}},
 
-    case is_following(User, Id) of
-	true -> {error, already_following};
+    case is_followering(User, Id) of
+	true -> {error, already_followering};
 	false ->
             {Dets, _} = dets_info(User#user.name),
-	    ets:insert(EtsPid, Follow),
-	    dets:insert(Dets, Follow),
+	    ets:insert(EtsPid, Follower),
+	    dets:insert(Dets, Follower),
 	    ok
     end.
 
 %%--------------------------------------------------------------------
 %%
-%% @doc delet user from follow database.
+%% @doc delet user from follower database.
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(delete_follow_user(EtsPid::pid(), User::#user{}, Id::integer()) -> 
-             {ok, deleted} | {error, not_following}).
+-spec(delete_follower_user(EtsPid::pid(), User::#user{}, Id::integer()) -> 
+             {ok, deleted} | {error, not_followering}).
 
-delete_follow_user(EtsPid, User, Id) ->
-    case is_following(EtsPid, Id) of
+delete_follower_user(EtsPid, User, Id) ->
+    case is_followering(EtsPid, Id) of
 	true ->
 	    {Dets, _} = dets_info(User#user.name),
 	    ets:delete(EtsPid, Id),
 	    dets:delete(Dets, Id),
 	    {ok, deleted};
-	false -> {error, not_following}
+	false -> {error, not_followering}
     end.
 
 %%--------------------------------------------------------------------
 %%
-%% @doc get all follow users id.
+%% @doc get all follower users id.
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(get_follow_ids(EtsPid::pid()) -> [#follow{}]).
+-spec(get_follower_ids(EtsPid::pid()) -> [#follower{}]).
 
-get_follow_ids(EtsPid) ->
+get_follower_ids(EtsPid) ->
     case ets:first(EtsPid) of
 	'$end_of_table' -> [];
 	First -> collect_id(EtsPid, First, [First])
@@ -146,22 +146,22 @@ map_do(EtsPid, Fun) ->
 	'$end_of_table' ->
 	    ok;
 	First ->
-	    [Follow] = ets:lookup(EtsPid, First),
-	    Fun(Follow),
+	    [Follower] = ets:lookup(EtsPid, First),
+	    Fun(Follower),
 	    map_do(EtsPid, Fun, First)
     end.
 
 %%--------------------------------------------------------------------
 %%
-%% @doc check followin user or not.
+%% @doc check followerin user or not.
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(is_follow(EtsPid::pid(), UserId::integer()) -> true|false).
+-spec(is_follower(EtsPid::pid(), UserId::integer()) -> true|false).
 
-is_follow(EtsPid, UserId) ->
+is_follower(EtsPid, UserId) ->
     case ets:lookup(EtsPid, UserId) of
-        [_FollowingUser] -> true;
+        [_FolloweringUser] -> true;
         [] -> false
     end.
 
@@ -175,24 +175,24 @@ is_follow(EtsPid, UserId) ->
 collect_id(EtsPid, Before, Result) ->
     case ets:next(EtsPid, Before) of
 	'$end_of_table' -> Result;
-	FollowId -> collect_id(EtsPid, FollowId, [FollowId | Result])
+	FollowerId -> collect_id(EtsPid, FollowerId, [FollowerId | Result])
     end.	    
 
--spec(is_following(EtsPid::pid(), Id::integer()) -> true | false).
+-spec(is_followering(EtsPid::pid(), Id::integer()) -> true | false).
 
-is_following(EtsPid, Id) ->
+is_followering(EtsPid, Id) ->
     case ets:lookup(EtsPid, Id) of
-	[_Follow] -> true;
+	[_Follower] -> true;
 	[] -> false
     end.    
 
 -spec(dets_info(UserName::atom()) -> {Dets::atom(), FileName::string()}).
 
 dets_info(UserName)->
-    DiscName = list_to_atom(atom_to_list(UserName) ++ "_FollowDisc"),
+    Dets = list_to_atom(atom_to_list(UserName) ++ "_FollowerDisc"),
     DB_DIR = message_box2_config:get(database_dir),
-    FileName = DB_DIR ++ atom_to_list(UserName) ++ "follow",
-    {DiscName, FileName}.
+    FileName = DB_DIR ++ atom_to_list(UserName) ++ "follower",
+    {Dets, FileName}.
 
 -spec(map_do(EtsPid::pid(), Fun::fun(), Entry::integer()) -> term()).
 
@@ -201,7 +201,7 @@ map_do(EtsPid, Fun, Entry) ->
 	'$end_of_table' ->
 	    ok;
 	Next ->
-	    [Follow] = ets:lookup(EtsPid, Next),
-	    Fun(Follow),
+	    [Follower] = ets:lookup(EtsPid, Next),
+	    Fun(Follower),
 	    map_do(EtsPid, Fun, Next)
     end.
