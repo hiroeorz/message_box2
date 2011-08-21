@@ -8,11 +8,8 @@
 -include("../include/user.hrl").
 
 -export([init/1, close_tables/1]).
--export([save_message/4]).
-
-%% for test
--export([get_message_from_db/2]).
-
+-export([save_message/4, get_message/4, get_sent_timeline/4, 
+         get_latest_message/1]).
 
 %%--------------------------------------------------------------------
 %%
@@ -82,15 +79,15 @@ restore_records(Tid, Records) ->
 close_tables(Tid)->
     ets:delete(Tid).
 
--spec(save_message(Tid::tid(), DBPid::pid(), User::#user{}, Msg::binary()) -> 
-             {ok, MessageId::integer()} ).
-
 %%--------------------------------------------------------------------
 %%
 %% @doc save message to ets and sqlite3 database.
 %%
 %% @end
 %%--------------------------------------------------------------------
+-spec(save_message(Tid::tid(), DBPid::pid(), User::#user{}, Msg::binary()) -> 
+             {ok, MessageId::integer()} ).
+
 save_message(Tid, DBPid, User, Msg) ->
     Id = get_max_id(DBPid) - 1,
     MessageId = get_message_id(User#user.id, Id),
@@ -106,6 +103,70 @@ save_message(Tid, DBPid, User, Msg) ->
     insert_message_to_sqlite3(DBPid, Message),
     util:shurink_ets(Tid, MessageMaxSizeOnMemory),
     {ok, MessageId}.
+
+%%--------------------------------------------------------------------
+%%
+%% @doc get latest message.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(get_latest_message(Tid::tid()) -> #message{}|{error, no_message_exist}).
+
+get_latest_message(Tid)->
+    case ets:first(Tid) of
+	'$end_of_table' -> {error, no_message_exist};
+	Id -> 
+	    [Message] = ets:lookup(Tid, Id),
+	    Message
+    end.
+
+
+%%--------------------------------------------------------------------
+%%
+%% @doc get message from database.
+%%
+%%--------------------------------------------------------------------
+-spec(get_message(Tid::tid(), DBPid::pid(), 
+                  User::#user{}, MessageId::integer()) -> #message{} ).
+
+get_message(Tid, _DBPid, User, MessageId)->
+    MessagePattern = #message{id='$1', message_id=MessageId, text='_', 
+			      datetime='_'},
+    case ets:match(Tid, MessagePattern) of
+	[] -> {error, not_found};
+	[[Id]] -> 
+	    case ets:lookup(Tid, Id) of
+		[Message0] ->
+		    Message1 = Message0#message{user=User},
+		    {ok, Message1};
+		Other -> {error, Other}
+	    end
+    end.
+
+%%
+%% @doc get sent timeline, max length is Count.
+%%
+-spec(get_sent_timeline(Tid::tid(), DBPid::pid(), User::#user{}, 
+                        Count::integer()) -> [#message{}] ).
+
+get_sent_timeline(Tid, DBPid, User, Count)->
+    First = ets:first(Tid),
+
+    case ets:first(Tid) of
+	'$end_of_table' -> [];
+	First ->
+	    MessageIds = util:get_timeline_ids(Tid, Count, First, [First]),
+	    lists:map(fun(Id) -> 
+                              case ets:lookup(Tid, Id) of
+                                  [Msg] -> 
+                                      Msg#message{user=User};
+                                  [] -> 
+                                      Msg = get_message_from_db(DBPid, Id),
+                                      Msg#message{user=User}
+                              end
+                      end,
+		      MessageIds)
+    end.
 
 %%--------------------------------------------------------------------
 %% local functions

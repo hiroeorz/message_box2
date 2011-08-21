@@ -4,12 +4,28 @@ Module util
 
 <h1>Module util</h1>
 
+* [Data Types](#types)
 * [Function Index](#index)
 * [Function Details](#functions)
 
 
 
 
+
+
+
+<h2><a name="types">Data Types</a></h2>
+
+
+
+
+
+<h3 class="typedecl"><a name="type-tid">tid()</a></h3>
+
+
+
+
+<pre>tid() = integer()</pre>
 
 
 <h2><a name="index">Function Index</a></h2>
@@ -123,7 +139,9 @@ create reply name list from tweet text.
 
 
 
-`get_timeline_ids(Device, Count, Before, Result) -> any()`
+<pre>get_timeline_ids(Tid::<a href="#type-tid">tid()</a>, Count::integer(), Before::integer(), Result::[integer()]) -> [term()]</pre>
+<br></br>
+
 
 <a name="get_user_from_message_id-1"></a>
 

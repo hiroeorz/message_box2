@@ -50,12 +50,15 @@ add_string(before, Len, EmptyChar, Result)->
 	    add_string(before, Len, EmptyChar, NewResult)
     end.
 	    
-get_timeline_ids(Device, Count, Before, Result)->
+-spec(get_timeline_ids(Tid::tid(), Count::integer(), 
+                       Before::integer(), Result::[integer()]) -> [term()]).
+
+get_timeline_ids(Tid, Count, Before, Result)->
     if
 	length(Result) >= Count -> lists:reverse(Result);
-	true -> case ets:next(Device, Before) of
+	true -> case ets:next(Tid, Before) of
 		    '$end_of_table' -> lists:reverse(Result);
-		    Id -> get_timeline_ids(Device, Count, Id, 
+		    Id -> get_timeline_ids(Tid, Count, Id, 
 					   [Id | Result])
 		end
     end.
