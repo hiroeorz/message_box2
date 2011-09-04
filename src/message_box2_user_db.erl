@@ -57,9 +57,10 @@ start_link() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    FileName = "/var/message_box2/user_db",
-    create_tables(FileName),
-    restore_table(),
+    mnesia:create_table(user, [{disc_copies, [node()]}, 
+                               {type, set},
+                               {attributes, record_info(fields, user)}]),
+
     {ok, #state{}}.
 
 %%--------------------------------------------------------------------
@@ -175,30 +176,35 @@ get_pid(UserName_OR_Id) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({add_user, Name, Mail, Password}, _From, State) ->
-    Reply = case get_user_by_name(Name) of
-                {ok, _User} -> {error, already_exist};
-                {error, not_found} ->
-                    NextUserId = case ets:last(userRam) of
-                                     '$end_of_table' -> 1;
-                                     UserId -> UserId + 1
-                                 end,
-                    User = #user{id=NextUserId, name=Name, status=true,
-                                 mail=Mail, password=undefined},
-                    MD5Password = util:get_md5_password(User, Password),
-                    NewUser = User#user{password=MD5Password},
+    Reply = 
+        case get_user_by_name(Name) of
+            {ok, _User} -> {error, already_exist};
+            {error, not_found} ->
+                Last = mnesia:activity(async_dirty, 
+                                       fun() -> mnesia:last(user) end),
+                NextUserId = case Last of
+                                 '$end_of_table' -> 1;
+                                 UserId -> UserId + 1
+                             end,
+
+                User = #user{id=NextUserId, name=Name, status=true,
+                             mail=Mail, password=undefined},
+                MD5Password = util:get_md5_password(User, Password),
+                NewUser = User#user{password=MD5Password},
                     
-                    ets:insert(userRam, NewUser),
-                    dets:insert(userDisk, NewUser),
-                    {ok, NewUser}
-            end,
+                mnesia:activity(transaction, 
+                                fun() -> mnesia:write(NewUser) end),
+
+                {ok, NewUser}
+        end,
 
     {reply, Reply, State};
 
 handle_call({update_user, User}, _From, State) ->
     Reply = case get_user_by_id(User#user.id) of
                 {ok, _} ->
-                    ets:insert(userRam, User),
-                    dets:insert(userDisk, User),
+                    mnesia:activity(transaction, 
+                                    fun() -> mnesia:write(User) end),
                     {ok, User};
                 {error, not_found} -> {error, not_found}
             end,
@@ -221,12 +227,12 @@ handle_call({save_pid, Id, Pid}, _From, State) ->
     Reply =     case get_user_by_id(Id) of
                     {ok, User} ->
                         UpdatedUser = User#user{pid=Pid},
-                        ets:insert(userRam, UpdatedUser),
-                        dets:insert(userDisk, UpdatedUser),
+                        mnesia:activity(async_dirty,
+                                        fun() -> mnesia:write(UpdatedUser) end),
                         ok;
                     {error, not_found} -> {error, not_found}
                 end,
-
+    
     {reply, Reply, State};
 
 handle_call({get_pid, UserName}, _From, State) when is_atom(UserName) ->
@@ -257,11 +263,12 @@ handle_call({get_pid, UserId}, _From, State) when is_integer(UserId) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_cast({map_do, Fun}, State) ->
-    case ets:first(userRam) of
+    case mnesia:activity(async_dirty, fun() -> mnesia:first(user) end) of
 	'$end_of_table' ->
 	    ok;
 	First ->
-	    [User] = ets:lookup(userRam, First),
+            [User] = mnesia:activity(async_dirty, 
+                                     fun() -> mnesia:read(user, First) end),
 	    Fun(User),
 	    map_do(Fun, First)
     end,
@@ -295,7 +302,6 @@ handle_info(_Info, State) ->
 %% @end
 %%--------------------------------------------------------------------
 terminate(_Reason, _State) ->
-    close_tables(),
     ok.
 
 %%--------------------------------------------------------------------
@@ -313,38 +319,16 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
--spec(create_tables(FileName::string()) -> ok).
-
-create_tables(FileName) ->
-    ets:new(userRam, [named_table, ordered_set, {keypos, #user.id}]),
-    dets:open_file(userDisk, [{file, FileName}, {keypos, #user.id}]),
-    ok.
-    
--spec(close_tables() -> true).
-
-close_tables() ->
-    ets:delete(userRam),
-    dets:close(userDisk).
-
--spec(restore_table() -> ok).
-
-restore_table() ->
-    Insert = fun(#user{id=_UserID, name=_UserName, status=_Status,
-		       mail=_Mail, password=_Password} = User)->
-		     ets:insert(userRam, User),
-		     continue
-	     end,
-    dets:traverse(userDisk, Insert),
-    ok.
-
 -spec(get_user_by_pid(Pid::pid()) -> #user{}).
 
 get_user_by_pid(Pid) when is_pid(Pid) ->
     Pattern = #user{id='$1', name='_', status='_', pid=Pid, 
 		    mail='_', password='_'},
-    case ets:match(userRam, Pattern) of
+
+    case mnesia:activity(async_dirty, 
+                         fun() -> mnesia:match_object(Pattern) end) of
 	[]-> {error, not_found};
-	[[UserId]] -> get_user_by_id(UserId)
+	[User] -> {ok, User}
     end.
 
 -spec(get_user_by_name(Name::atom()) -> #user{}).
@@ -352,25 +336,28 @@ get_user_by_pid(Pid) when is_pid(Pid) ->
 get_user_by_name(Name) when is_atom(Name) ->
     Pattern = #user{id='$1', name=Name, status='_', pid='_', 
 		    mail='_', password='_'},
-    case ets:match(userRam, Pattern) of
+
+    case mnesia:activity(async_dirty, 
+                         fun() -> mnesia:match_object(Pattern) end) of
 	[]-> {error, not_found};
-	[[UserId]] -> get_user_by_id(UserId)
+	[User] -> {ok, User}
     end.
 
 -spec(get_user_by_id(Id::integer()) -> #user{}).
 
 get_user_by_id(Id) when is_integer(Id) ->
-    case ets:lookup(userRam, Id) of
+    case mnesia:activity(async_dirty, fun() -> mnesia:read(user, Id) end) of
 	[] -> {error, not_found};
 	[User] -> {ok, User}
     end.
 
 map_do(Fun, Entry) ->
-    case ets:next(userRam, Entry) of
+    case mnesia:activity(async_dirty, fun() -> mnesia:next(user, Entry) end) of
 	'$end_of_table' ->
 	    ok;
 	Next ->
-	    [User] = ets:lookup(userRam, Next),
+	    [User] = mnesia:activity(async_dirty, 
+                                     fun() -> mnesia:read(user, Next) end),
 	    Fun(User),
 	    map_do(Fun, Next)
     end.

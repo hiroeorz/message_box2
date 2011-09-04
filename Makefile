@@ -25,7 +25,7 @@ edoc:
 	@$(REBAR) doc
 
 boot:
-	@ $(ERL) -pa $(BEAMDIR) -name $(APP_NAME)@$(HOST_NAME) \
+	@ $(ERL) -pa $(BEAMDIR) -sname $(APP_NAME) \
                  -boot start_sasl \
                  -s $(APP_NAME) start
 boot_slave1:

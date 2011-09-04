@@ -10,11 +10,13 @@
 	      }).           
 
 
--record(follower, {id          ::integer(),
+-record(follower, {user_id     ::integer(),
+                   id          ::integer(),
 		   datetime    ::term()
                   }).
 
--record(follow, {id            ::integer(),
+-record(follow, {user_id       ::integer(),
+                 id            ::integer(),
 		 datetime      ::term()
                 }).
 

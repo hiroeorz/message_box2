@@ -7,3 +7,4 @@ db
 deps
 .DS_Store
 file_box.conf
+Mnesia.message_box2@*
