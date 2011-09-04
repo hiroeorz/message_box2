@@ -137,24 +137,10 @@ sleep(Msec) when is_integer(Msec) ->
 %%
 
 get_md5_password(User, RawPassword) when is_list(RawPassword) ->
-    Context =  crypto:md5_init(), 
-    NewContext0 = crypto:md5_update(Context, RawPassword),
-    NewContext1 = crypto:md5_update(NewContext0, atom_to_list(User#user.name)),
-    NewContext2 = crypto:md5_update(NewContext1, User#user.mail),
-    NewContext3 = crypto:md5_update(NewContext2, ?MD5_KEY1),
-    NewContext4 = crypto:md5_update(NewContext3, ?MD5_KEY2),
-    NewContext5 = crypto:md5_update(NewContext4, ?MD5_KEY3),
-    crypto:md5_final(NewContext5).
+    crypto:md5([RawPassword, User#user.name, User#user.mail,
+                ?MD5_KEY1, ?MD5_KEY2, ?MD5_KEY3]).
     
 get_onetime_password(User, RawPassword) when is_list(RawPassword) ->
-    Context =  crypto:md5_init(), 
-    NewContext0 = crypto:md5_update(Context, RawPassword),
-    NewContext1 = crypto:md5_update(NewContext0, atom_to_list(User#user.name)),
-    NewContext2 = crypto:md5_update(NewContext1, User#user.mail),
-    NewContext3 = crypto:md5_update(NewContext2, ?MD5_KEY1),
-    NewContext4 = crypto:md5_update(NewContext3, ?MD5_KEY2),
-    NewContext5 = crypto:md5_update(NewContext4, ?MD5_KEY3),
-
     {Year, Month, Day} = date(),
     {Hour, Min, Sec} = time(),
     DateTimeStr = 
@@ -165,8 +151,9 @@ get_onetime_password(User, RawPassword) when is_list(RawPassword) ->
 	integer_to_list(Min) ++
 	integer_to_list(Sec),
 
-    NewContext6 = crypto:md5_update(NewContext5, DateTimeStr),
-    crypto:md5_final(NewContext6).
+    crypto:md5([RawPassword, User#user.name, User#user.mail,
+                ?MD5_KEY1, ?MD5_KEY2, ?MD5_KEY3, 
+                DateTimeStr]).
 
 exist_in_list(List, Elem) ->
     case List of

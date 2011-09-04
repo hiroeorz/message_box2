@@ -24,12 +24,12 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    UserDb = {message_box2_user_db,                             %% id
-              {message_box2_user_db, start_link, []},           %% child
-              permanent,                                        %% restart
-              2000,                                             %% shutdown
-              worker,                                           %% type
-              [message_box2_user_db]},                          %% modules
+    _UserDb = {message_box2_user_db,                             %% id
+               {message_box2_user_db, start_link, []},           %% child
+               permanent,                                        %% restart
+               2000,                                             %% shutdown
+               worker,                                           %% type
+               [message_box2_user_db]},                          %% modules
 
     RestartStrategy = one_for_one,
     MaxRestarts = 5,
@@ -38,7 +38,7 @@ init([]) ->
 
     BootList = case message_box2_config:get(type) of
                    master -> 
-                       [UserDb];
+                       [];
                    slave ->
                        []
                end,        

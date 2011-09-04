@@ -3,10 +3,10 @@
 
 -record(user, {id              ::integer(),
 	       status = true   ::atom(),
-	       pid             ::atom(),
-	       name            ::term(),
-	       mail            ::string(),
-	       password        ::string()
+	       pid             ::pid(),
+	       name            ::binary(),
+	       mail            ::binary(),
+	       password        ::binary()
 	      }).           
 
 
