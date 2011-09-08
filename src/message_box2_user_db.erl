@@ -13,7 +13,7 @@
          map_do/1, save_pid/2, get_pid/1]).
 
 %% Include
--include("../include/user.hrl").
+-include("user.hrl").
 
 
 -define(SERVER, ?MODULE). 

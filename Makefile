@@ -5,10 +5,16 @@ REBAR=./rebar
 APP_NAME=message_box2
 HOST_NAME=127.0.0.1
 
-all: clean compile xref
+all: clean update-deps compile xref
+
+update-deps:
+	@$(REBAR) update-deps
+
+get-deps:
+	@$(REBAR) get-deps
 
 compile:
-	@$(REBAR) get-deps compile
+	@$(REBAR) compile
 
 xref:
 	@$(REBAR) xref

@@ -6,7 +6,7 @@
 -export([start/2, stop/1]).
 
 %% Include
--include("../include/user.hrl").
+-include("user.hrl").
 
 %% ===================================================================
 %% Application callbacks

@@ -3,9 +3,9 @@
 
 -module(util).
 -include_lib("eunit/include/eunit.hrl").
--include("../include/message_box.hrl").
--include("../include/user.hrl").
--include("../include/message.hrl").
+-include("message_box.hrl").
+-include("user.hrl").
+-include("message.hrl").
 -export([get_user_from_message_id/1, get_user_id_from_message_id/1, 
 	 formatted_number/2, formatted_number/3, get_timeline_ids/4,
 	 get_reply_list/1, is_reply_text/1,
@@ -144,12 +144,8 @@ get_onetime_password(User, RawPassword) when is_list(RawPassword) ->
     {Year, Month, Day} = date(),
     {Hour, Min, Sec} = time(),
     DateTimeStr = 
-	integer_to_list(Year) ++ 
-	integer_to_list(Month) ++ 
-	integer_to_list(Day) ++
-	integer_to_list(Hour) ++
-	integer_to_list(Min) ++
-	integer_to_list(Sec),
+        lists:flatten(io_lib:format("~w~w~w~w~w~w", 
+                                    [Year, Month, Day, Hour, Min, Sec])),
 
     crypto:md5([RawPassword, User#user.name, User#user.mail,
                 ?MD5_KEY1, ?MD5_KEY2, ?MD5_KEY3, 

@@ -3,9 +3,9 @@
 
 -module(mentions_db).
 -include_lib("eunit/include/eunit.hrl").
--include("../include/message_box.hrl").
--include("../include/message.hrl").
--include("../include/user.hrl").
+-include("message_box.hrl").
+-include("message.hrl").
+-include("user.hrl").
 
 -export([init/1]).
 -export([save_message_id/3, get_timeline/3]).

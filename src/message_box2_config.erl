@@ -8,15 +8,15 @@
 load() ->
     {ThisFile, _} = filename:find_src(message_box2_config),
     SrcDir = filename:dirname(ThisFile),
+    %%ConfFilePath = filename:absname_join(code:priv_dir(message_box2), "message_box2.conf").
     ConfFilePath = filename:absname_join(SrcDir, "../conf/message_box2.conf"),
     load(ConfFilePath).
 
 load(File) ->
-    case file:open(File, read) of
-	{ok, Dev} ->
-	    {ok, {config, ConfigList}} = io:read(Dev, 0),
-	    read_config(message_box2, ConfigList),
-	    file:close(Dev);
+    case file:consult(File) of
+        {ok, [{config, ConfigList}]} ->
+            ?debugVal(ConfigList),
+	    read_config(message_box2, ConfigList);
 	Other ->
 	    ?debugVal(Other),
 	    Other
