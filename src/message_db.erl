@@ -10,7 +10,7 @@
 -define(DBName, "messages").
 
 -export([init/1, close_tables/1]).
--export([save_message/4, get_message/4, get_sent_timeline/4, 
+-export([save_message/3, get_message/4, get_sent_timeline/4, 
          get_latest_message/1]).
 
 %%--------------------------------------------------------------------
@@ -94,12 +94,12 @@ close_tables(Tid)->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(save_message(Tid::tid(), UserId::integer(), User::#user{}, 
-                   Msg::binary()) -> {ok, MessageId::integer()} ).
+-spec(save_message(Tid::tid(), UserId::integer(), Msg::binary()) -> 
+             {ok, MessageId::integer()} ).
 
-save_message(Tid, UserId, User, Msg) ->
+save_message(Tid, UserId, Msg) ->
     Id = get_max_id(UserId) - 1,
-    MessageId = get_message_id(User#user.id, Id),
+    MessageId = get_message_id(UserId, Id),
     Message = #message{id = Id, 
                        message_id = MessageId, 
                        text = Msg, 

@@ -4,6 +4,7 @@ REBAR=./rebar
 
 APP_NAME=message_box2
 HOST_NAME=127.0.0.1
+DB_DIR=/var/message_box2/db
 
 all: clean compile xref
 
@@ -31,10 +32,8 @@ edoc:
 	@$(REBAR) doc
 
 boot:
+	@ mkdir -p $(DB_DIR)
 	@ $(ERL) -pa $(BEAMDIR) -sname $(APP_NAME) \
-                 -boot start_sasl \
-                 -s $(APP_NAME) start
-boot_slave1:
-	@ $(ERL) -pa $(BEAMDIR) -name $(APP_NAME)_slave1@$(HOST_NAME) \
+                 -mnesia dir '"$(DB_DIR)"' \
                  -boot start_sasl \
                  -s $(APP_NAME) start
