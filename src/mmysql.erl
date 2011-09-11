@@ -20,7 +20,8 @@ init() ->
 init(Pool) ->
     crypto:start(),
     application:start(emysql),
-    emysql:add_pool(Pool, 10, "root", "gcv38tfa", "localhost", 3306,
+    emysql:add_pool(Pool, 10, 
+                    "message_box", "message_box", "localhost", 3306,
                     "message_box", utf8).
 
 %%--------------------------------------------------------------------
