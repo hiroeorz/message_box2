@@ -7,6 +7,8 @@
 -include("message.hrl").
 -include("user.hrl").
 
+-define(DBName, "messages").
+
 -export([init/1, close_tables/1]).
 -export([save_message/4, get_message/4, get_sent_timeline/4, 
          get_latest_message/1]).
@@ -17,44 +19,51 @@
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(init(DBPid::pid()) -> {ok, Tid::tid()}).
+-spec(init(User::#user{}|integer()) -> {ok, Tid::tid()}).
 
-init(DBPid)->
-    {ok, Tid} = create_tables(DBPid),
-    restore_table(DBPid, Tid),
+init(UserId) when is_integer(UserId) ->
+    {ok, User} = message_box2_user_db:lookup_id(UserId),
+    init(User);
+
+init(User)->
+    {ok, Tid} = create_tables(User),
+    restore_table(User, Tid),
     {ok, Tid}.    
 
--spec(create_tables(DBPid::pid()) -> {ok, Tid::tid()}).
+-spec(create_tables(User::#user{}) -> ok).
 
-create_tables(DBPid)->  
+create_tables(User)->  
     Tid = ets:new(message, [ordered_set, {keypos, #message.id}]),
-    create_sqlite3_tables(DBPid),
+    create_mysql_tables(User#user.id),
     {ok, Tid}.
 
--spec(create_sqlite3_tables(DBPid::pid()) -> ok).
+-spec(create_mysql_tables(UserId::integer()) -> ok).
 
-create_sqlite3_tables(DBPid) ->
-    case lists:member(messages, sqlite3:list_tables(DBPid)) of
+create_mysql_tables(UserId) ->
+    TableName = mmysql:users_table(UserId, ?DBName),
+    case lists:member(TableName, mmysql:users_table_list(UserId)) of
 	true -> ok;
 	false ->
-	    sqlite3:sql_exec(DBPid, 
-			     "create table messages (
-                                id INTEGER PRIMARY KEY,
-                                message_id INTEGER NOT NULL,
-                                text TEXT, 
-                                datetime INTEGER)")
-    end.    
+	    ?OK_PACKET = mmysql:execute("create table ~s (
+                                            id INTEGER PRIMARY KEY,
+                                            message_id INTEGER NOT NULL,
+                                            text TEXT, 
+                                            datetime INTEGER)",
+                                        [TableName])
+    end.
 
--spec(restore_table(DBPid::pid(), Tid::tid()) -> ok).
+-spec(restore_table(User::#user{}, Tid::tid()) -> ok).
 
-restore_table(DBPid, Tid) ->
+restore_table(User, Tid) ->
+    UserId = User#user.id,
     MessageMaxSizeOnMemory = 
         message_box2_config:get(message_max_size_on_memory),
 
-    SqlResults = sqlite3:sql_exec(DBPid,
-				  "select * from messages
-                                     order by id desc limit :max", 
-                                  [{':max', MessageMaxSizeOnMemory}]),
+    TableName = mmysql:users_table(UserId, ?DBName),
+    SqlResults = mmysql:execute("select * from ~s
+                                   order by id desc limit ~w",
+                                [TableName, MessageMaxSizeOnMemory]),
+
     Records = parse_message_records(SqlResults),
     restore_records(Tid, Records).
 
@@ -85,11 +94,11 @@ close_tables(Tid)->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(save_message(Tid::tid(), DBPid::pid(), User::#user{}, Msg::binary()) -> 
-             {ok, MessageId::integer()} ).
+-spec(save_message(Tid::tid(), UserId::integer(), User::#user{}, 
+                   Msg::binary()) -> {ok, MessageId::integer()} ).
 
-save_message(Tid, DBPid, User, Msg) ->
-    Id = get_max_id(DBPid) - 1,
+save_message(Tid, UserId, User, Msg) ->
+    Id = get_max_id(UserId) - 1,
     MessageId = get_message_id(User#user.id, Id),
     Message = #message{id = Id, 
                        message_id = MessageId, 
@@ -100,7 +109,7 @@ save_message(Tid, DBPid, User, Msg) ->
         message_box2_config:get(message_max_size_on_memory),
 
     ets:insert(Tid, Message),
-    insert_message_to_sqlite3(DBPid, Message),
+    insert_message_to_mysql(UserId, Message),
     util:shurink_ets(Tid, MessageMaxSizeOnMemory),
     {ok, MessageId}.
 
@@ -126,10 +135,10 @@ get_latest_message(Tid)->
 %% @doc get message from database.
 %%
 %%--------------------------------------------------------------------
--spec(get_message(Tid::tid(), DBPid::pid(), 
+-spec(get_message(Tid::tid(), _UserId::integer(), 
                   User::#user{}, MessageId::integer()) -> #message{} ).
 
-get_message(Tid, _DBPid, User, MessageId)->
+get_message(Tid, _UserId, User, MessageId)->
     MessagePattern = #message{id='$1', message_id=MessageId, text='_', 
 			      datetime='_'},
     case ets:match(Tid, MessagePattern) of
@@ -146,10 +155,10 @@ get_message(Tid, _DBPid, User, MessageId)->
 %%
 %% @doc get sent timeline, max length is Count.
 %%
--spec(get_sent_timeline(Tid::tid(), DBPid::pid(), User::#user{}, 
+-spec(get_sent_timeline(Tid::tid(), UserId::integer(), User::#user{}, 
                         Count::integer()) -> [#message{}] ).
 
-get_sent_timeline(Tid, DBPid, User, Count)->
+get_sent_timeline(Tid, UserId, User, Count)->
     First = ets:first(Tid),
 
     case ets:first(Tid) of
@@ -161,7 +170,7 @@ get_sent_timeline(Tid, DBPid, User, Count)->
                                   [Msg] -> 
                                       Msg#message{user=User};
                                   [] -> 
-                                      Msg = get_message_from_db(DBPid, Id),
+                                      Msg = get_message_from_db(UserId, Id),
                                       Msg#message{user=User}
                               end
                       end,
@@ -179,13 +188,13 @@ get_sent_timeline(Tid, DBPid, User, Count)->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(get_message_from_db(DBPid::pid(), Id::integer) -> 
+-spec(get_message_from_db(UserId::integer(), Id::integer) -> 
              #message{} | {error, not_found}).
 
-get_message_from_db(DBPid, Id) ->
-    SqlResults = sqlite3:sql_exec(DBPid, 
-                                  "select * from messages where id = :id",
-                                  [{':id', Id}]),
+get_message_from_db(UserId, Id) ->
+    TableName = mmysql:users_table(UserId, ?DBName),
+    SqlResults = mmysql:execute("select * from ~s where id = ~w",
+                                [TableName, Id]),
     case SqlResults of
         [] ->
             {error, not_found};
@@ -194,12 +203,13 @@ get_message_from_db(DBPid, Id) ->
             Msg
     end.
 
--spec(get_max_id(DBPid::pid()) -> integer()).
+-spec(get_max_id(UserId::integer()) -> integer()).
 
-get_max_id(DBPid)->
-    Result = sqlite3:sql_exec(DBPid, "select * from messages 
-                                           order by id limit 1"),
-    
+get_max_id(UserId)->
+    TableName = mmysql:users_table(UserId, ?DBName),
+    Result = mmysql:execute("select * from ~s order by id limit 1",
+                           [TableName]),
+
     case parse_message_records(Result) of
 	[] -> 0;
 	[LastRecord] -> LastRecord#message.id
@@ -221,14 +231,13 @@ get_message_id(UserId, Id) ->
 -spec(parse_message_records(list()) -> list(#message{}) ).
 
 parse_message_records(Result) ->
-    [{columns, _ColumnList}, {rows, RowList}] = Result,
-    parse_message_records(RowList, []).
+    parse_message_records(Result#result_packet.rows, []).
 
 parse_message_records(RowList, RecordList) ->
     case RowList of
 	[] -> lists:reverse(RecordList);
 	[Row | Tail] -> 
-	    {Id, MsgId, TextBin, Sec} = Row,
+	    [Id, MsgId, TextBin, Sec] = Row,
 	    Datetime = calendar:gregorian_seconds_to_datetime(Sec),
 	    Record = #message{id = Id, message_id = MsgId,
 			      text = TextBin,
@@ -236,12 +245,17 @@ parse_message_records(RowList, RecordList) ->
 	    parse_message_records(Tail, [Record | RecordList])
     end.
 
-insert_message_to_sqlite3(DBPid, Message) ->
+-spec(insert_message_to_mysql(UserId::integer(), Message::#message{}) -> ok).
+
+insert_message_to_mysql(UserId, Message) ->
+    TableName = mmysql:users_table(UserId, ?DBName),
     Sec = calendar:datetime_to_gregorian_seconds(Message#message.datetime),
-    sqlite3:sql_exec(DBPid,
-		    "insert into messages (id, message_id, text, datetime)
-                        values(:id, :message_id, :text, :datetime)",
-		    [{':id'        , Message#message.id},
-		     {':message_id', Message#message.message_id},
-		     {':text'      , Message#message.text},
-		     {':datetime'  , Sec}]).
+    ?OK_PACKET = mmysql:execute("insert into ~s (id, message_id, text, datetime)
+                                   values(~w, ~w, ~s, ~w)",
+                                [TableName,
+                                 Message#message.id,
+                                 Message#message.message_id,
+                                 Message#message.text,
+                                 Sec
+                                ]),
+    ok.

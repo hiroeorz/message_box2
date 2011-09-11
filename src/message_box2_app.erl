@@ -27,6 +27,7 @@ start(_StartType, _StartArgs) ->
     mnesia:create_schema([node()]),
     mnesia:start(),
     create_tables(),
+    mmysql:init(),
     message_box2_sup:start_link().
 
 stop(_State) ->

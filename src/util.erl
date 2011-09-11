@@ -180,6 +180,8 @@ icon_path(Name) when is_atom(Name) ->
 %%
 %% @doc ets shurink function
 %%
+-spec(shurink_ets(Tid::tid(), MaxCount::integer()) -> ok).
+
 shurink_ets(Tid, MaxCount) ->
     case ets:first(Tid) of
         '$end_of_table' -> 
@@ -198,4 +200,3 @@ shurink_ets(Tid, MaxCount, Index, Count) ->
             end,
             shurink_ets(Tid, MaxCount, Next, Count + 1)
     end.
-

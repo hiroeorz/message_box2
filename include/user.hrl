@@ -1,6 +1,7 @@
 %% File : usr.hrl
 %% Description : Include file for user_db
 
+%% mysql
 -record(user, {id              ::non_neg_integer(),
 	       status = true   ::atom(),
 	       pid             ::pid(),
