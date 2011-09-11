@@ -10,7 +10,7 @@
 -define(DBName, "messages").
 
 -export([init/1, close_tables/1]).
--export([save_message/3, get_message/4, get_sent_timeline/4, 
+-export([save_message/3, get_message/3, get_sent_timeline/4, 
          get_latest_message/1]).
 
 %%--------------------------------------------------------------------
@@ -135,10 +135,10 @@ get_latest_message(Tid)->
 %% @doc get message from database.
 %%
 %%--------------------------------------------------------------------
--spec(get_message(Tid::tid(), _UserId::integer(), 
-                  User::#user{}, MessageId::integer()) -> #message{} ).
+-spec(get_message(Tid::tid(), User::#user{}, MessageId::integer()) -> 
+             #message{} ).
 
-get_message(Tid, _UserId, User, MessageId)->
+get_message(Tid, User, MessageId)->
     MessagePattern = #message{id='$1', message_id=MessageId, text='_', 
 			      datetime='_'},
     case ets:match(Tid, MessagePattern) of
@@ -251,7 +251,7 @@ insert_message_to_mysql(UserId, Message) ->
     TableName = mmysql:users_table(UserId, ?DBName),
     Sec = calendar:datetime_to_gregorian_seconds(Message#message.datetime),
     ?OK_PACKET = mmysql:execute("insert into ~s (id, message_id, text, datetime)
-                                   values(~w, ~w, ~s, ~w)",
+                                   values(~w, ~w, '~s', ~w)",
                                 [TableName,
                                  Message#message.id,
                                  Message#message.message_id,

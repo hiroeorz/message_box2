@@ -104,4 +104,6 @@ users_table(UserId, TableName) ->
 -spec(format_sql(Str::string(), List::list()) -> binary()).
 
 format_sql(Str, List) ->
-    list_to_binary(lists:flatten(io_lib:format(Str, List))).
+    Sql = lists:flatten(io_lib:format(Str, List)),
+    ?debugVal(Sql),
+    list_to_binary(Sql).
