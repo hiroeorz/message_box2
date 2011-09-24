@@ -8,7 +8,7 @@
 -include("user.hrl").
 
 -export([save_follow_user/2, delete_follow_user/2,
-         get_follow_ids/1, get_follower_ids/1, map_do/2, is_following/2, 
+         get_follow_ids/1, get_follower_ids/1, map_do/3, is_following/2, 
          get_follows/1, get_followers/1]).
 
 %%--------------------------------------------------------------------
@@ -127,11 +127,17 @@ get_followers(User) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(map_do(User::#user{}, Fun::fun()) -> ok).
+-spec(map_do(follow|follower, User::#user{}, Fun::fun()) -> ok).
 
-map_do(User, Fun) ->
-    UserId = User#user.id,
-    Pattern = #follow{user_id = UserId, id = '_', datetime = '_'},
+map_do(follow, User, Fun) ->
+    Pattern = #follow{user_id = User#user.id, id = '_', datetime = '_'},
+    map_do(Pattern, Fun);
+
+map_do(follower, User, Fun) ->
+    Pattern = #follow{user_id = '_', id = User#user.id, datetime = '_'},
+    map_do(Pattern, Fun).
+
+map_do(Pattern, Fun) ->
     FollowList = mnesia:activity(async_dirty, 
                                  fun() -> mnesia:match_object(Pattern) end),
     lists:map(Fun, FollowList),

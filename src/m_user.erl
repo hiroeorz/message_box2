@@ -9,11 +9,17 @@
 -module(m_user).
 
 -behaviour(gen_server).
+-include("message_box.hrl").
 -include("message.hrl").
+-include("user.hrl").
 
 %% API
--export([start_link/0,
-         get_message/2]).
+-export([start_link/1,
+         get_message/2, send_message/3]).
+
+%% Internal System
+-export([save_to_home/3, save_to_mentions/2]).
+
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -21,7 +27,11 @@
 
 -define(SERVER, ?MODULE). 
 
--record(state, {}).
+-record(state, {user                   ::#user{},
+                message_tid            ::tid(),
+                home_tid               ::tid(),
+                mentions_tid           ::tid(),
+                one_time_password_list ::list(binary())}).
 
 %%%===================================================================
 %%% API
@@ -34,10 +44,11 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
--spec(start_link() -> {ok, Pid::pid()} | ignore | {error, Error::atom()}).
+-spec(start_link(UserId::integer()) -> 
+             {ok, Pid::pid()} | ignore | {error, Error::atom()}).
 
-start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+start_link(UserId) when is_integer(UserId) ->
+    gen_server:start_link(?MODULE, [UserId], []).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -47,9 +58,47 @@ start_link() ->
 %%--------------------------------------------------------------------
 -spec(get_message(UserId::integer(), MessageId::integer()) -> #message{} ).
 
-get_message(_UserId, _MessageId) ->
-    #message{id=0, message_id=0, text="", datetime={date(), time()},
-             user=undefined}.
+get_message(Pid, MessageId) ->
+    gen_server:call(Pid, {get_message, MessageId}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Send Message.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(send_message(Pid::pid(), Password::string(), TextBin::binary()) ->
+             {ok, MessageId::integer()}).
+
+send_message(Pid, Password, TextBin) ->
+    gen_server:call(Pid, {send_message, Password, TextBin}).
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Save to users home table.
+%% This function called from other m_user process.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(save_to_home(Pid::pid(), MessageId::integer(), 
+                   IsReplyTo::{{true, #user{}}|{false, nil}} ) -> ok).
+
+save_to_home(Pid, MessageId, IsReplyText) ->
+    gen_server:call(Pid, {save_to_home, MessageId, IsReplyText}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Save to users home table.
+%% This function called from other m_user process.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(save_to_mentions(Pid::pid(), MessageId::integer()) -> 
+             {ok, MessageId::integer()}).
+
+save_to_mentions(Pid, MessageId) ->
+    gen_server:call(Pid, {save_to_mentions, MessageId}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -66,8 +115,18 @@ get_message(_UserId, _MessageId) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([]) ->
-    {ok, #state{}}.
+init([UserId]) ->
+    {ok, User} = message_box2_user_db:lookup_id(UserId),
+    {ok, MessageTid} = message_db:init(UserId),
+    {ok, HomeTid} = home_db:init(UserId),
+    {ok, MentionsTid} = mentions_db:init(UserId),
+
+    message_box2_user_db:save_pid(UserId, self()),
+    
+    {ok, #state{user=User,
+                message_tid=MessageTid, home_tid=HomeTid, 
+                mentions_tid=MentionsTid,
+                one_time_password_list=[]}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -83,8 +142,62 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call(_Request, _From, State) ->
-    Reply = ok,
+handle_call({get_message, MessageId}, _From, State) ->
+    Tid = State#state.message_tid,
+    User = State#state.user,
+    Reply = message_db:get_message(Tid, User, MessageId),
+    {reply, Reply, State};
+
+handle_call({send_message, Password, TextBin}, _From, State) ->
+    User = State#state.user,
+    OneTimePasswordList = State#state.one_time_password_list,
+    Tid = State#state.message_tid,    
+    HomeTid = State#state.home_tid,
+
+    Reply = 
+        case util:authenticate(User, Password, OneTimePasswordList) of
+            {ok, authenticated} ->
+                case message_db:save_message(Tid, User#user.id, TextBin) of
+                    {ok, MessageId} ->
+                        IsReplyTo = util:is_reply_text(TextBin),
+                        send_to_followers(MessageId, User, HomeTid, IsReplyTo),
+                            
+                        ReplyToList = util:get_reply_list(TextBin),
+                        send_to_replies(MessageId, ReplyToList),
+                        {ok, MessageId};
+                    Other -> Other
+                end;
+            Other -> Other
+        end,
+
+    {reply, Reply, State};
+
+handle_call({save_to_home, MessageId, IsReplyText}, _From, State) ->
+    Tid = State#state.home_tid,
+    User = State#state.user,
+    UserId = User#user.id,
+
+    Reply = 
+        case IsReplyText of
+            {true, To} ->
+                io:format("IsReplyText:~p", [IsReplyText]),
+                FromUserId = util:get_user_id_from_message_id(MessageId),
+                
+                case check_reply_receiver(FromUserId, To#user.id, User) of
+                    true  -> home_db:save_message_id(Tid, UserId, MessageId);
+                    false -> ok
+                end;               
+            
+            {false, nil} ->
+                home_db:save_message_id(Tid, UserId, MessageId)
+        end,
+    
+    {reply, Reply, State};
+
+handle_call({save_to_mentions, MessageId}, _From, State) ->
+    Tid = State#state.mentions_tid,
+    User = State#state.user,
+    Reply = mentions_db:save_message_id(Tid, User#user.id, MessageId),
     {reply, Reply, State}.
 
 %%--------------------------------------------------------------------
@@ -141,3 +254,54 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+%%
+%% @doc send message to followers and saved to there's home_db.
+%%
+send_to_followers(MessageId, User, HomeTid, IsReplyTo) ->
+    Fun1 = fun(Follower) ->
+		   m_user:save_to_home(Follower#follower.id, MessageId, 
+				       IsReplyTo),
+		   io:format("sent: ~p to ~p~n", 
+			     [MessageId, Follower#follower.id])
+	   end,
+    Fun2 = fun(Follower) -> spawn(fun() -> Fun1(Follower) end) end,
+    follow_db:map_do(follower, User, Fun2),
+    home_db:save_message_id(HomeTid, User#user.id, MessageId).
+
+%%
+%% @doc send reply to destination user. 
+%%    
+send_to_replies(MessageId, ReplyToList) ->
+    case ReplyToList of
+	[] -> ok;
+	[ReplyTo | Tail] ->
+	    spawn(fun() ->
+			  %%m_user:save_to_mentions(ReplyTo, MessageId),
+			  io:format("reply ~p to ~p~n", [MessageId, ReplyTo]),
+			  send_to_replies(MessageId, Tail)
+		  end)
+    end.
+
+%%
+%% @doc check reply receiver display home.
+%%
+-spec(check_reply_receiver(SenderId::integer(), ReceiverId::integer(), 
+                           User::#user{}) -> true|false ).
+
+check_reply_receiver(SenderId, ReceiverId, User) ->
+    ThisUserId = User#user.id,
+
+    case follow_db:is_following(User, SenderId) of
+        true ->
+            case follow_db:is_following(User, ReceiverId) of
+                true -> true;
+                _ ->
+                    case ReceiverId  of
+                        ThisUserId -> true;
+                        _ -> false
+                    end
+            end;
+        _  ->
+            false
+    end.

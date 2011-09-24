@@ -37,3 +37,9 @@ boot:
                  -mnesia dir '"$(DB_DIR)"' \
                  -boot start_sasl \
                  -s $(APP_NAME) start
+
+boot_test:
+	@ mkdir -p $(DB_DIR)
+	@ $(ERL) -pa $(BEAMDIR) -sname $(APP_NAME) \
+                 -boot start_sasl \
+                 -s $(APP_NAME) start

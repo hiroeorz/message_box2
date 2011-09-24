@@ -6,6 +6,7 @@
 -export([start/2, stop/1]).
 
 %% Include
+-include_lib("eunit/include/eunit.hrl").
 -include("user.hrl").
 
 %% ===================================================================
@@ -24,10 +25,10 @@ start(_StartType, _StartArgs) ->
             connect_to_nodes(NodeList)
     end,
 
-    mnesia:create_schema([node()]),
-    mnesia:start(),
-    create_tables(),
-    mmysql:init(),
+    mnesia:create_schema([node()]), ?debugVal("mnesia create schema."),
+    mnesia:start(),                 ?debugVal("mnesia started."),
+    create_tables(),                ?debugVal("mnesia create tables."),
+    mmysql:init(),                  ?debugVal("mysql init."),
     message_box2_sup:start_link().
 
 stop(_State) ->
