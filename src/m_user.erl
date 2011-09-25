@@ -15,7 +15,7 @@
 
 %% API
 -export([start_link/1,
-         get_message/2, send_message/3, add_follower/2]).
+         get_message/2, send_message/3, add_follower/2, delete_follower/2]).
 
 %% Internal System
 -export([save_to_home/3, save_to_mentions/2]).
@@ -107,8 +107,24 @@ save_to_mentions(Pid, MessageId) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
+-spec(add_follower(Pid::pid(), UserId::integer()) -> 
+             ok|{error, already_following}|{error, not_found}).
+
 add_follower(Pid, UserId) ->
     gen_server:call(Pid, {add_follower, UserId}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Remove other user.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(delete_follower(Pid::pid(), UserId::integer()) ->
+             {ok, deleted}|{error, not_following}|{error, not_found}).
+
+delete_follower(Pid, UserId) ->
+    gen_server:call(Pid, {delete_follower, UserId}).
+
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -221,7 +237,21 @@ handle_call({add_follower, UserId}, _From, State) ->
                 {error, not_found}
         end,
 
+    {reply, Reply, State};
+
+handle_call({delete_follower, UserId}, _From, State) ->
+    User = State#state.user,
+
+    Reply = 
+        case message_box2_user_db:lookup_id(UserId) of
+            {ok, _User} ->
+                follow_db:delete_follow_user(User, UserId);
+            {error, not_found} ->
+                {error, not_found}
+        end,
+
     {reply, Reply, State}.
+
 
 %%--------------------------------------------------------------------
 %% @private
