@@ -16,7 +16,7 @@
 %% API
 -export([start_link/1,
          get_message/2, send_message/3, 
-         add_follower/2, delete_follower/2, is_following/2]).
+         follow/3, unfollow/3, is_following/2]).
 
 %% Internal System
 -export([save_to_home/3, save_to_mentions/2]).
@@ -74,7 +74,6 @@ get_message(Pid, MessageId) ->
 send_message(Pid, Password, TextBin) ->
     gen_server:call(Pid, {send_message, Password, TextBin}).
 
-
 %%--------------------------------------------------------------------
 %% @doc
 %% Save to users home table.
@@ -101,18 +100,17 @@ save_to_home(Pid, MessageId, IsReplyText) ->
 save_to_mentions(Pid, MessageId) ->
     gen_server:call(Pid, {save_to_mentions, MessageId}).
 
-
 %%--------------------------------------------------------------------
 %% @doc
 %% Follow other user.
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(add_follower(Pid::pid(), UserId::integer()) -> 
+-spec(follow(Pid::pid(), Password::string(), UserId::integer()) -> 
              ok|{error, already_following}|{error, not_found}).
 
-add_follower(Pid, UserId) ->
-    gen_server:call(Pid, {add_follower, UserId}).
+follow(Pid, Password, UserId) ->
+    gen_server:call(Pid, {follow, Password, UserId}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -120,11 +118,11 @@ add_follower(Pid, UserId) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(delete_follower(Pid::pid(), UserId::integer()) ->
+-spec(unfollow(Pid::pid(), Password::string(), UserId::integer()) ->
              {ok, deleted}|{error, not_following}|{error, not_found}).
 
-delete_follower(Pid, UserId) ->
-    gen_server:call(Pid, {delete_follower, UserId}).
+unfollow(Pid, Password, UserId) ->
+    gen_server:call(Pid, {unfollow, Password, UserId}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -236,30 +234,40 @@ handle_call({save_to_mentions, MessageId}, _From, State) ->
     Reply = mentions_db:save_message_id(Tid, User#user.id, MessageId),
     {reply, Reply, State};
 
-handle_call({add_follower, UserId}, _From, State) ->
+handle_call({follow, Password, UserId}, _From, State) ->
     User = State#state.user,
+    OneTimePasswordList = State#state.one_time_password_list,
 
-    Reply = 
-        case message_box2_user_db:lookup_id(UserId) of
-            {ok, _User} ->
-                follow_db:save_follow_user(User, UserId);
-            {error, not_found} ->
-                {error, not_found}
+    Reply =     
+        case util:authenticate(User, Password, OneTimePasswordList) of
+            {ok, authenticated} ->
+                case message_box2_user_db:lookup_id(UserId) of
+                    {ok, _User} ->
+                        follow_db:save_follow_user(User, UserId);
+                    {error, not_found} ->
+                        {error, not_found}
+                end;
+            Other -> Other
         end,
 
     {reply, Reply, State};
 
-handle_call({delete_follower, UserId}, _From, State) ->
+handle_call({unfollow, Password, UserId}, _From, State) ->
     User = State#state.user,
+    OneTimePasswordList = State#state.one_time_password_list,
 
     Reply = 
-        case message_box2_user_db:lookup_id(UserId) of
-            {ok, _User} ->
-                follow_db:delete_follow_user(User, UserId);
-            {error, not_found} ->
-                {error, not_found}
+        case util:authenticate(User, Password, OneTimePasswordList) of
+            {ok, authenticated} ->
+                case message_box2_user_db:lookup_id(UserId) of
+                    {ok, _User} ->
+                        follow_db:delete_follow_user(User, UserId);
+                    {error, not_found} ->
+                        {error, not_found}
+                end;
+            Other -> Other
         end,
-
+    
     {reply, Reply, State};
 
 handle_call({is_following, UserId}, _From, State) ->
