@@ -29,7 +29,10 @@ start(_StartType, _StartArgs) ->
     mnesia:start(),                 ?debugVal("mnesia started."),
     create_tables(),                ?debugVal("mnesia create tables."),
     mmysql:init(),                  ?debugVal("mysql init."),
-    message_box2_sup:start_link().
+    Reply = message_box2_sup:start_link(),
+    m_user_sup:start_all_users(),
+    Reply.
+
 
 stop(_State) ->
     ok.

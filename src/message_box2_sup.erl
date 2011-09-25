@@ -36,11 +36,14 @@ init([]) ->
     MaxSecondsBetweenRestarts = 10,
     SupFlags = {RestartStrategy, MaxRestarts, MaxSecondsBetweenRestarts},
 
+    MUserSup = {m_user_sup, {m_user_sup, start_link, []},
+                permanent, 2000, supervisor, [m_user, m_user_sup]},
+
     BootList = case message_box2_config:get(type) of
                    master -> 
-                       [];
+                       [MUserSup];
                    slave ->
-                       []
+                       [MUserSup]
                end,        
 
     {ok, { SupFlags, BootList } }.
