@@ -58,7 +58,7 @@ start_link(UserId) when is_integer(UserId) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(get_message(UserId::integer(), MessageId::integer()) -> #message{} ).
+-spec(get_message(Pid::pid(), MessageId::integer()) -> #message{} ).
 
 get_message(Pid, MessageId) ->
     gen_server:call(Pid, {get_message, MessageId}).

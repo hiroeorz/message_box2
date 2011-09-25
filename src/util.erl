@@ -19,11 +19,15 @@
 -define(MD5_KEY2, "garigarikunnashiaji").
 -define(MD5_KEY3, "goronekogorousan").
 
+-spec(get_user_id_from_message_id(MessageId::integer()) -> integer() ).
+
 get_user_id_from_message_id(MessageId) ->
     IdStr = util:formatted_number(MessageId, ?MESSAGE_ID_LENGTH),
     {UserId, _Rest} = string:to_integer(string:substr(IdStr, 1, 
 						      ?USER_ID_LENGTH)),
     UserId.
+
+-spec(get_user_from_message_id(MessageId::integer()) -> #user{} ).
 
 get_user_from_message_id(MessageId) ->
     IdStr = util:formatted_number(MessageId, ?MESSAGE_ID_LENGTH),

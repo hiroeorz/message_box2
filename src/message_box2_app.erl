@@ -30,7 +30,7 @@ start(_StartType, _StartArgs) ->
     create_tables(),                ?debugVal("mnesia create tables."),
     mmysql:init(),                  ?debugVal("mysql init."),
     Reply = message_box2_sup:start_link(),
-    m_user_sup:start_all_users(),
+    spawn_link(fun() -> m_user_sup:start_all_users() end),
     Reply.
 
 

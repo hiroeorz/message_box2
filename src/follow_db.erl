@@ -36,7 +36,7 @@ save_follow_user(User, Id) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec(delete_follow_user(User::#user{}, Id::integer()) -> 
-             {ok, deleted} | {error, not_following}).
+             ok | {error, not_following}).
 
 delete_follow_user(User, Id) ->
     case is_following(User, Id) of
