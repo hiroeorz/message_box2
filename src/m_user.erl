@@ -15,7 +15,8 @@
 
 %% API
 -export([start_link/1,
-         get_message/2, send_message/3, add_follower/2, delete_follower/2]).
+         get_message/2, send_message/3, 
+         add_follower/2, delete_follower/2, is_following/2]).
 
 %% Internal System
 -export([save_to_home/3, save_to_mentions/2]).
@@ -124,6 +125,15 @@ add_follower(Pid, UserId) ->
 
 delete_follower(Pid, UserId) ->
     gen_server:call(Pid, {delete_follower, UserId}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Check follow state.
+%%
+%% @end
+%%--------------------------------------------------------------------
+is_following(Pid, UserId) ->
+    gen_server:call(Pid, {is_following, UserId}).
 
 
 %%%===================================================================
@@ -248,6 +258,17 @@ handle_call({delete_follower, UserId}, _From, State) ->
                 follow_db:delete_follow_user(User, UserId);
             {error, not_found} ->
                 {error, not_found}
+        end,
+
+    {reply, Reply, State};
+
+handle_call({is_following, UserId}, _From, State) ->
+    User = State#state.user,
+
+    Reply = 
+        case message_box2_user_db:lookup_id(UserId) of
+            {ok, _User} ->        follow_db:is_following(User, UserId);
+            {error, not_found} -> {error, not_found}
         end,
 
     {reply, Reply, State}.

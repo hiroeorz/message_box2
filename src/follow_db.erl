@@ -149,7 +149,7 @@ map_do(Pattern, Fun) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec(is_following(UserId::#user{}, Id::integer()) -> true | false).
+-spec(is_following(User::#user{}, Id::integer()) -> true | false).
 
 is_following(User, Id) ->
     UserId = User#user.id,
