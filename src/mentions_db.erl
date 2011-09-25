@@ -126,7 +126,7 @@ get_timeline(Tid, UserId, Count) ->
 		  Result = 
 		      case util:get_user_from_message_id(MessageId) of
 			  {ok, FollowerUser} ->
-			      m_user:get_message(FollowerUser#user.id, 
+			      m_user:get_message(FollowerUser#user.pid, 
 						 MessageId);
 			  Other -> {error, {Other, {not_found, MessageId}}}
 		      end,

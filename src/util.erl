@@ -66,7 +66,7 @@ get_timeline_ids(Tid, Count, Before, Result)->
 %%
 %% @doc create reply name list from tweet text.
 %%
--spec(get_reply_list(string()) -> list(atom()) ).
+-spec(get_reply_list(string()) -> list(binary()) ).
 
 get_reply_list(Text) when is_binary(Text) ->
     get_reply_list(binary_to_list(Text));
@@ -82,7 +82,7 @@ get_reply_list(Tokens, List) when is_list(Tokens) ->
     case string:sub_string(Token, 1, 1) of
 	"@" ->
 	    UserNameStr = string:sub_string(Token, 2, length(Token)),
-	    get_reply_list(Tail, [list_to_atom(UserNameStr) | List]);
+	    get_reply_list(Tail, [list_to_binary(UserNameStr) | List]);
 	_Other ->
 	    get_reply_list(Tail, List)
     end.
@@ -102,7 +102,7 @@ is_reply_text(Text) when is_list(Text) ->
 	    case string:sub_string(ToToken, 2, length(ToToken)) of
 		"" -> {false, nil};
 		To ->
-                    case message_box2_user_db:lookup_name(list_to_atom(To)) of
+                    case message_box2_user_db:lookup_name(To) of
                         {ok, User} ->
                             {true, User};
                         _->

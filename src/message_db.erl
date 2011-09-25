@@ -10,7 +10,7 @@
 -define(DBName, "messages").
 
 -export([init/1, close_tables/1]).
--export([save_message/3, get_message/3, get_sent_timeline/4, 
+-export([save_message/3, get_message/3, get_sent_timeline/3, 
          get_latest_message/1]).
 
 %%--------------------------------------------------------------------
@@ -155,10 +155,11 @@ get_message(Tid, User, MessageId)->
 %%
 %% @doc get sent timeline, max length is Count.
 %%
--spec(get_sent_timeline(Tid::tid(), UserId::integer(), User::#user{}, 
-                        Count::integer()) -> [#message{}] ).
+-spec(get_sent_timeline(Tid::tid(), User::#user{}, Count::integer()) -> 
+             [#message{}] ).
 
-get_sent_timeline(Tid, UserId, User, Count)->
+get_sent_timeline(Tid, User, Count)->
+    UserId = User#user.id,
     First = ets:first(Tid),
 
     case ets:first(Tid) of

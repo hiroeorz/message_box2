@@ -15,8 +15,9 @@
 
 %% API
 -export([start_link/1,
-         get_message/2, send_message/3, 
-         follow/3, unfollow/3, is_following/2]).
+         get_message/2, send_message/3,
+         follow/3, unfollow/3, is_following/2,
+         get_sent_timeline/2, get_home_timeline/2, get_mentions_timeline/2]).
 
 %% Internal System
 -export([save_to_home/3, save_to_mentions/2]).
@@ -130,9 +131,44 @@ unfollow(Pid, Password, UserId) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
+-spec(is_following(Pid::pid(), UserId::integer()) -> true|false).
+
 is_following(Pid, UserId) ->
     gen_server:call(Pid, {is_following, UserId}).
 
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Get sent timeline list.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(get_sent_timeline(Pid::pid(), Count::integer()) -> [#message{}]).
+
+get_sent_timeline(Pid, Count) ->
+    gen_server:call(Pid, {get_sent_timeline, Count}).
+    
+%%--------------------------------------------------------------------
+%% @doc
+%% Get home timeline list.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(get_home_timeline(Pid::pid(), Count::integer()) -> [#message{}]).
+
+get_home_timeline(Pid, Count) ->
+    gen_server:call(Pid, {get_home_timeline, Count}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Get home timeline list.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(get_mentions_timeline(Pid::pid(), Count::integer()) -> [#message{}]).
+
+get_mentions_timeline(Pid, Count) ->
+    gen_server:call(Pid, {get_mentions_timeline, Count}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -176,11 +212,15 @@ init([UserId]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({get_message, MessageId}, _From, State) ->
-    Tid = State#state.message_tid,
-    User = State#state.user,
-    Reply = message_db:get_message(Tid, User, MessageId),
-    {reply, Reply, State};
+handle_call({get_message, MessageId}, From, State) ->
+    spawn_link(fun() ->
+                       Tid = State#state.message_tid,
+                       User = State#state.user,
+                       Reply = message_db:get_message(Tid, User, MessageId),
+                       gen_server:reply(From, Reply)
+               end),
+
+    {noreply, State};
 
 handle_call({send_message, Password, TextBin}, _From, State) ->
     User = State#state.user,
@@ -279,7 +319,34 @@ handle_call({is_following, UserId}, _From, State) ->
             {error, not_found} -> {error, not_found}
         end,
 
-    {reply, Reply, State}.
+    {reply, Reply, State};
+
+handle_call({get_sent_timeline, Count}, _From, State) ->
+    User = State#state.user,
+    Tid = State#state.message_tid,
+    Reply = message_db:get_sent_timeline(Tid, User, Count),
+    {reply, Reply, State};
+
+handle_call({get_home_timeline, Count}, From, State) ->
+    spawn_link(fun() ->
+                       User = State#state.user,
+                       Tid = State#state.home_tid,
+                       Reply = home_db:get_timeline(Tid, User#user.id, Count),
+                       gen_server:reply(From, Reply)
+               end),
+
+    {noreply, State};
+
+handle_call({get_mentions_timeline, Count}, From, State) ->
+    spawn_link(fun() ->
+                       User = State#state.user,
+                       Tid = State#state.mentions_tid,
+                       Reply = mentions_db:get_timeline(Tid, User#user.id, 
+                                                        Count),
+                       gen_server:reply(From, Reply)
+               end),
+
+    {noreply, State}.
 
 
 %%--------------------------------------------------------------------
@@ -356,13 +423,18 @@ send_to_followers(MessageId, User, HomeTid, IsReplyTo) ->
 
 %%
 %% @doc send reply to destination user. 
-%%    
+%%
+-spec(send_to_replies(MessageId::integer(), ReplyToList::list(binary())) -> ok).
+
 send_to_replies(MessageId, ReplyToList) ->
     case ReplyToList of
 	[] -> ok;
 	[ReplyTo | Tail] ->
 	    spawn(fun() ->
-			  %%m_user:save_to_mentions(ReplyTo, MessageId),
+                          {ok, ToUser} = 
+                              message_box2_user_db:lookup_name(ReplyTo),
+
+			  m_user:save_to_mentions(ToUser#user.pid, MessageId),
 			  io:format("reply ~p to ~p~n", [MessageId, ReplyTo]),
 			  send_to_replies(MessageId, Tail)
 		  end)
