@@ -15,7 +15,7 @@
 
 %% API
 -export([start_link/1,
-         get_message/2, send_message/3]).
+         get_message/2, send_message/3, add_follower/2]).
 
 %% Internal System
 -export([save_to_home/3, save_to_mentions/2]).
@@ -89,7 +89,7 @@ save_to_home(Pid, MessageId, IsReplyText) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Save to users home table.
+%% Save to users mentions table.
 %% This function called from other m_user process.
 %%
 %% @end
@@ -99,6 +99,16 @@ save_to_home(Pid, MessageId, IsReplyText) ->
 
 save_to_mentions(Pid, MessageId) ->
     gen_server:call(Pid, {save_to_mentions, MessageId}).
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Follow other user.
+%%
+%% @end
+%%--------------------------------------------------------------------
+add_follower(Pid, UserId) ->
+    gen_server:call(Pid, {add_follower, UserId}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -198,6 +208,19 @@ handle_call({save_to_mentions, MessageId}, _From, State) ->
     Tid = State#state.mentions_tid,
     User = State#state.user,
     Reply = mentions_db:save_message_id(Tid, User#user.id, MessageId),
+    {reply, Reply, State};
+
+handle_call({add_follower, UserId}, _From, State) ->
+    User = State#state.user,
+
+    Reply = 
+        case message_box2_user_db:lookup_id(UserId) of
+            {ok, _User} ->
+                follow_db:save_follow_user(User, UserId);
+            {error, not_found} ->
+                {error, not_found}
+        end,
+
     {reply, Reply, State}.
 
 %%--------------------------------------------------------------------
@@ -260,10 +283,13 @@ code_change(_OldVsn, State, _Extra) ->
 %%
 send_to_followers(MessageId, User, HomeTid, IsReplyTo) ->
     Fun1 = fun(Follower) ->
-		   m_user:save_to_home(Follower#follower.id, MessageId, 
-				       IsReplyTo),
+                   FollowerId = Follower#follow.user_id,
+                   {ok, FUser} = message_box2_user_db:lookup_id(FollowerId),
+                   Pid = FUser#user.pid,
+		   m_user:save_to_home(Pid, MessageId, IsReplyTo),
+
 		   io:format("sent: ~p to ~p~n", 
-			     [MessageId, Follower#follower.id])
+			     [MessageId, Follower#follow.id])
 	   end,
     Fun2 = fun(Follower) -> spawn(fun() -> Fun1(Follower) end) end,
     follow_db:map_do(follower, User, Fun2),

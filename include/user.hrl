@@ -11,13 +11,8 @@
 	      }).           
 
 
--record(follower, {user_id     ::non_neg_integer(),
-                   id          ::non_neg_integer(),
-		   datetime    ::calendar:t_now()
-                  }).
-
--record(follow, {user_id       ::integer(),
-                 id            ::integer(),
-		 datetime      ::term()
+-record(follow, {user_id       ::non_neg_integer(),
+                 id            ::non_neg_integer(),
+		 datetime      ::calendar:t_now()
                 }).
 
