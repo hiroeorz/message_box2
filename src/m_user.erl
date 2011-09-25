@@ -321,12 +321,16 @@ handle_call({is_following, UserId}, _From, State) ->
 
     {reply, Reply, State};
 
-handle_call({get_sent_timeline, Count}, _From, State) ->
-    User = State#state.user,
-    Tid = State#state.message_tid,
-    Reply = message_db:get_sent_timeline(Tid, User, Count),
-    {reply, Reply, State};
+handle_call({get_sent_timeline, Count}, From, State) ->
+    spawn_link(fun() ->
+                       User = State#state.user,
+                       Tid = State#state.message_tid,
+                       Reply = message_db:get_sent_timeline(Tid, User, Count),
+                       gen_server:reply(From, Reply)
+               end),
 
+    {noreply, State};
+                  
 handle_call({get_home_timeline, Count}, From, State) ->
     spawn_link(fun() ->
                        User = State#state.user,
