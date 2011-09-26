@@ -16,8 +16,7 @@
 -include("user.hrl").
 
 %% API
--export([start_link/0,
-         get_message/1, send_message/3]).
+-export([start_link/0, spawn_do/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -42,30 +41,9 @@ start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 
-%%--------------------------------------------------------------------
-%% @doc
-%% Get Message from user process.
-%%
-%% @end
-%%--------------------------------------------------------------------
--spec(get_message(MessageId::integer()) -> #message{} ).
-
-get_message(MessageId) when is_integer(MessageId) ->
-    gen_server:call(?SERVER, {get_message, MessageId}).
-
-%%--------------------------------------------------------------------
-%% @doc
-%% Send Message.
-%%
-%% @end
-%%--------------------------------------------------------------------
--spec(send_message(UserId::integer(), Password::string(), TextBin::binary()) ->
-             {ok, MessageId::integer()}).
-
-send_message(UserId, Password, TextBin) when is_integer(UserId) and
-                                             is_list(Password) and
-                                             is_binary(TextBin) ->
-    gen_server:call(?SERVER, {send_message, UserId, Password, TextBin}).
+spawn_do(Fun) ->
+    gen_server:call(?SERVER, {spawn_do, Fun}).
+    
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -99,25 +77,15 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({get_message, MessageId}, From, State) ->
+handle_call({spawn_do, Fun}, From, State) ->
     spawn_link(fun() ->
                        {ok, Pid} = message_box2_worker:start_link(),
-                       Reply = message_box2_worker:get_message(Pid, MessageId),
-                       gen_server:reply(From, Reply)
-               end),
-
-    {noreply, State};
-
-handle_call({send_message, UserId, Password, TextBin}, From, State) ->
-    spawn_link(fun() ->
-                       {ok, Pid} = message_box2_worker:start_link(),
-                       Reply = message_box2_worker:send_message(Pid, UserId,
-                                                                Password, 
-                                                                TextBin),
+                       Reply = Fun(Pid),
                        gen_server:reply(From, Reply)
                end),
     
     {noreply, State}.
+
 
 %%--------------------------------------------------------------------
 %% @private
