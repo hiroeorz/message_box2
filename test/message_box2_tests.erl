@@ -6,24 +6,9 @@
 -include("message.hrl").
 -include("user.hrl").
 
--define(TEST_MYSQL_POOL,       message_box_mysql).
+-export([create_many_users/1, base_setup/0]).
 
--define(Setup, fun() -> 
-                       message_box2_config:load(),
-                       mnesia:create_schema([node()]),
-                       mnesia:start(),
-                       mnesia:create_table(user, [{ram_copies, [node()]}, 
-                                     {type, set},
-                                     {attributes, record_info(fields, user)}]),
-                       
-                       mnesia:create_table(follow, [{ram_copies, [node()]}, 
-                                     {type, set},
-                                     {attributes, record_info(fields, follow)},
-                                     {index, [id]}]),
-                       mmysql:init_for_test(),
-                       message_box2_sup:start_link()
-	       end).
-
+-define(Setup, fun() -> base_setup() end).
 -define(Clearnup, fun(_) ->
                           drop_users_tables(),
                           application:stop(emysql)
@@ -203,6 +188,32 @@ basic_test_() ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+base_setup() ->
+    message_box2_config:load(),
+    mnesia:create_schema([node()]),
+    mnesia:start(),
+    mnesia:create_table(user, [{ram_copies, [node()]}, 
+                               {type, set},
+                               {attributes, record_info(fields, user)}]),
+    
+    mnesia:create_table(follow, [{ram_copies, [node()]}, 
+                                 {type, set},
+                                 {attributes, record_info(fields, follow)},
+                                 {index, [id]}]),
+    mmysql:init_for_test(),
+    message_box2_sup:start_link().
+        
+
+% future use.
+create_many_users(0) -> ok;
+create_many_users(Count) ->
+    UserName = lists:flatten(io_lib:format("test_user_~w", [Count])),
+    MailAddress = lists:flatten(io_lib:format("~s@mail", [UserName])),
+    Password = lists:flatten(io_lib:format("password~w", [Count])),
+    {ok, _} = message_box2:create_user(UserName, MailAddress, Password),
+    util:sleep(500),
+    create_many_users(Count - 1).
 
 drop_users_tables() ->
     Fun = fun(User) ->

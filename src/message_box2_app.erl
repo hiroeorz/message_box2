@@ -27,12 +27,11 @@ start(_StartType, _StartArgs) ->
 
     mnesia:create_schema([node()]), ?debugVal("mnesia create schema."),
     mnesia:start(),                 ?debugVal("mnesia started."),
-    create_tables(),                ?debugVal("mnesia create tables."),
+    create_tables(disc_copies),     ?debugVal("mnesia create tables."),
     mmysql:init(),                  ?debugVal("mysql init."),
     Reply = message_box2_sup:start_link(),
     spawn_link(fun() -> m_user_sup:start_all_users() end),
     Reply.
-
 
 stop(_State) ->
     ok.
@@ -50,12 +49,12 @@ connect_to_nodes(NodeList) ->
             connect_to_nodes(Tail)
     end.
 
-create_tables() ->
-    mnesia:create_table(user, [{disc_copies, [node()]}, 
+create_tables(CopyType) ->
+    mnesia:create_table(user, [{CopyType, [node()]}, 
                                {type, set},
                                {attributes, record_info(fields, user)}]),
 
-    mnesia:create_table(follow, [{disc_copies, [node()]}, 
+    mnesia:create_table(follow, [{CopyType, [node()]}, 
                                  {type, set},
                                  {attributes, record_info(fields, follow)},
                                  {index, [id]}]).
