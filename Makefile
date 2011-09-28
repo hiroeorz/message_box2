@@ -3,6 +3,7 @@ BEAMDIR=./deps/*/ebin ./ebin
 REBAR=./rebar
 
 APP_NAME=message_box2
+CLIENT_NAME=message_box2_client
 HOST_NAME=127.0.0.1
 DB_DIR=/var/message_box2/db
 
@@ -29,7 +30,7 @@ check:
 	@$(REBAR) skip_deps=true eunit 
 
 edoc:
-	@$(REBAR) doc
+	@$(REBAR) skip_deps=true doc
 
 boot:
 	@ mkdir -p $(DB_DIR)
@@ -43,3 +44,7 @@ boot_test:
 	@ $(ERL) -pa $(BEAMDIR) -sname $(APP_NAME) \
                  -boot start_sasl \
                  -s $(APP_NAME) start
+
+boot_client:
+	@ $(ERL) -pa $(BEAMDIR) -sname $(CLIENT_NAME) \
+                 -setcookie cookie1234

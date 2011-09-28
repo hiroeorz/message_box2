@@ -1,5 +1,5 @@
 %% File : mmysql.erl
-%% Description : database handelr
+%% Description : database handler
 
 -module(mmysql).
 
@@ -8,7 +8,23 @@
 -include("message.hrl").
 -include("user.hrl").
 
--define(DEFAULT_MYSQL_POOL, message_box_mysql).
+%% @todo move to configuration.
+-define(DEFAULT_MYSQL_POOL,       message_box_mysql).
+-define(DEFAULT_MYSQL_POOL_COUNT, 10).
+-define(DEFAULT_MYSQL_DATABASE,   "message_box").
+-define(DEFAULT_MYSQL_USER,       "message_box").
+-define(DEFAULT_MYSQL_PASSWORD,   "message_box").
+-define(DEFAULT_MYSQL_HOST,       "localhost").
+-define(DEFAULT_MYSQL_PORT,       3306).
+
+%% @doc for test.
+-define(TEST_MYSQL_POOL,       ?DEFAULT_MYSQL_POOL).
+-define(TEST_MYSQL_POOL_COUNT, ?DEFAULT_MYSQL_POOL_COUNT).
+-define(TEST_MYSQL_DATABASE,   "message_box_test").
+-define(TEST_MYSQL_USER,       ?DEFAULT_MYSQL_USER).
+-define(TEST_MYSQL_PASSWORD,   ?DEFAULT_MYSQL_PASSWORD).
+-define(TEST_MYSQL_HOST,       ?DEFAULT_MYSQL_HOST).
+-define(TEST_MYSQL_PORT,       ?DEFAULT_MYSQL_PORT).
 
 -export([init/0]).
 -export([execute/1, execute/2, execute/3, users_table/2,
@@ -17,12 +33,23 @@
 init() ->
     init(?DEFAULT_MYSQL_POOL).
 
+init_for_test() ->
+    crypto:start(),
+    application:start(emysql),
+    emysql:add_pool(?TEST_MYSQL_POOL, 
+                    ?TEST_MYSQL_POOL_COUNT, 
+                    ?TEST_MYSQL_USER, ?TEST_MYSQL_PASSWORD, 
+                    ?TEST_MYSQL_HOST, ?TEST_MYSQL_PORT,
+                    ?TEST_MYSQL_DATABASE, utf8).
+
 init(Pool) ->
     crypto:start(),
     application:start(emysql),
-    emysql:add_pool(Pool, 10, 
-                    "message_box", "message_box", "localhost", 3306,
-                    "message_box", utf8).
+    emysql:add_pool(Pool, 
+                    ?DEFAULT_MYSQL_POOL_COUNT, 
+                    ?DEFAULT_MYSQL_USER, ?DEFAULT_MYSQL_PASSWORD, 
+                    ?DEFAULT_MYSQL_HOST, ?DEFAULT_MYSQL_PORT,
+                    ?DEFAULT_MYSQL_DATABASE, utf8).
 
 %%--------------------------------------------------------------------
 %%

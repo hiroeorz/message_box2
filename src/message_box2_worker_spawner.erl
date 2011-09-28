@@ -38,11 +38,11 @@
 %% @end
 %%--------------------------------------------------------------------
 start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+    gen_server:start_link({global, ?SERVER}, ?MODULE, [], []).
 
 
 spawn_do(Fun) ->
-    gen_server:call(?SERVER, {spawn_do, Fun}).
+    gen_server:call({global, ?SERVER}, {spawn_do, Fun}).
     
 
 %%%===================================================================

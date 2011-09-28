@@ -9,6 +9,9 @@
 -module(m_user).
 
 -behaviour(gen_server).
+
+%% Include
+-include_lib("eunit/include/eunit.hrl").
 -include("message_box.hrl").
 -include("message.hrl").
 -include("user.hrl").
@@ -43,7 +46,6 @@
 %% @doc
 %% Starts the server
 %%
-%% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
 -spec(start_link(UserId::integer()) -> 

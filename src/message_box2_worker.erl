@@ -17,6 +17,7 @@
 
 %% API
 -export([start_link/0,
+         create_user/4,
          send_message/4, get_message/2, 
          get_home_timeline/3, get_mentions_timeline/3, get_sent_timeline/3,
          follow/4, unfollow/4, is_following/3]).
@@ -42,6 +43,18 @@
 %%--------------------------------------------------------------------
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Get Message from user process.
+%%
+%% @end
+%%--------------------------------------------------------------------
+
+create_user(Pid, Name, Mail, Password) when is_pid(Pid) and
+                                            is_list(Name) and is_list(Mail) and
+                                            is_list(Password) ->
+    gen_server:call(Pid, {create_user, Name, Mail, Password}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -187,6 +200,13 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+
+handle_call({create_user, Name, Mail, Password}, _From, State) ->
+    {ok, CreatedUser} = message_box2_user_db:add_user(Name, Mail, Password),
+    {ok, _Child} = m_user_sup:start_user(CreatedUser),
+    {ok, User} = message_box2_user_db:lookup_id(CreatedUser#user.id),
+    {reply, {ok, User}, State};
+
 handle_call({get_message, MessageId}, _From, State) ->
     Reply = 
         case util:get_user_from_message_id(MessageId) of

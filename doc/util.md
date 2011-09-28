@@ -124,7 +124,7 @@ create md5 password
 
 
 
-<pre>get_reply_list(Text::string()) -> [atom()]</pre>
+<pre>get_reply_list(Text::string()) -> [binary()]</pre>
 <br></br>
 
 
@@ -151,7 +151,9 @@ create reply name list from tweet text.
 
 
 
-`get_user_from_message_id(MessageId) -> any()`
+<pre>get_user_from_message_id(MessageId::integer()) -> #user{id = undefined | non_neg_integer(), status = atom(), pid = undefined | pid(), name = undefined | binary(), mail = undefined | binary(), password = undefined | binary()}</pre>
+<br></br>
+
 
 <a name="get_user_id_from_message_id-1"></a>
 
@@ -161,7 +163,9 @@ create reply name list from tweet text.
 
 
 
-`get_user_id_from_message_id(MessageId) -> any()`
+<pre>get_user_id_from_message_id(MessageId::integer()) -> integer()</pre>
+<br></br>
+
 
 <a name="icon_path-1"></a>
 
@@ -181,7 +185,7 @@ create reply name list from tweet text.
 
 
 
-<pre>is_reply_text(Text::binary() | string()) -> {true, #user{id = undefined | integer(), status = atom(), pid = undefined | atom(), name = undefined | term(), mail = undefined | string(), password = undefined | string()}} | {false, nil}</pre>
+<pre>is_reply_text(Text::binary() | string()) -> {true, #user{id = undefined | non_neg_integer(), status = atom(), pid = undefined | pid(), name = undefined | binary(), mail = undefined | binary(), password = undefined | binary()}} | {false, nil}</pre>
 <br></br>
 
 
@@ -196,7 +200,9 @@ if added Text is replay message.return {true, #usr{}} orelse {false, nil}
 
 
 
-`shurink_ets(Tid, MaxCount) -> any()`
+<pre>shurink_ets(Tid::<a href="#type-tid">tid()</a>, MaxCount::integer()) -> ok</pre>
+<br></br>
+
 
 
 

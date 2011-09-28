@@ -1,5 +1,6 @@
 {application,message_box2}.
 {packages,[]}.
-{modules,[follow_db,follower_db,home_db,mentions_db,message_box2,
+{modules,[follow_db,home_db,m_user,m_user_sup,mentions_db,message_box2,
           message_box2_app,message_box2_config,message_box2_sup,
-          message_box2_user_db,message_db,util]}.
+          message_box2_user_db,message_box2_worker,
+          message_box2_worker_spawner,message_db,mmysql,util]}.

@@ -15,7 +15,7 @@
 -include("user.hrl").
 
 %% API
--export([start_link/0, start_all_users/0]).
+-export([start_link/0, start_all_users/0, start_user/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -63,20 +63,21 @@ init([]) ->
     {ok, {SupFlags, []}}.
 
 start_all_users() ->
-    Fun = fun(User) ->
-                  Restart = permanent,
-                  Shutdown = 2000,
-                  Type = worker,
-                  
-                  AChild = {User#user.id, {m_user, start_link, [User#user.id]},
-                            Restart, Shutdown, Type, 
-                            [m_user, follow_db, mentions_db, message_db, 
-                             mmysql, util]},
-
-                  supervisor:start_child(?SERVER, AChild)
-          end,
-
+    Fun = fun(User) -> m_user_sup:start_user(User) end,
     message_box2_user_db:map_do(Fun).
+
+start_user(User) ->
+    Restart = permanent,
+    Shutdown = 2000,
+    Type = worker,
+    
+    AChild = {User#user.id, {m_user, start_link, [User#user.id]},
+              Restart, Shutdown, Type, 
+              [m_user, follow_db, mentions_db, message_db, 
+               mmysql, util]},
+    
+    supervisor:start_child(?SERVER, AChild).
+
 
 %%%===================================================================
 %%% Internal functions

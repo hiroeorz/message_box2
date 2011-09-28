@@ -14,6 +14,7 @@
 -include("user.hrl").
 
 -export([start/0, stop/0,
+         create_user/3,
          get_message/1, send_message/3, 
          get_home_timeline/2, get_mentions_timeline/2, get_sent_timeline/2,
          follow/3, unfollow/3, is_following/2]).
@@ -41,6 +42,26 @@ start() ->
 stop() ->
     application:stop(?MODULE),
     ok.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Get Message from user process.
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec(create_user(Name::string(), Mail::string(), Password::string()) -> 
+             {ok, #user{}} | {error, already_exist}).
+
+create_user(Name, Mail, Password) when is_list(Name) and is_list(Mail) and
+                                       is_list(Password) ->
+
+    Fun = fun(Pid) -> 
+                  {ok, _User} = message_box2_worker:create_user(Pid,
+                                                                Name, Mail, 
+                                                                Password)
+          end,
+    message_box2_worker_spawner:spawn_do(Fun).    
+
 
 %%--------------------------------------------------------------------
 %% @doc
