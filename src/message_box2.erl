@@ -15,7 +15,7 @@
 
 -export([start/0, stop/0,
          create_user/3,
-         get_message/1, send_message/3, 
+         get_latest_message/1, get_message/1, send_message/3, 
          get_home_timeline/2, get_mentions_timeline/2, get_sent_timeline/2,
          follow/3, unfollow/3, is_following/2]).
 
@@ -62,6 +62,25 @@ create_user(Name, Mail, Password) when is_list(Name) and is_list(Mail) and
           end,
     message_box2_worker_spawner:spawn_do(Fun).    
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Get Latest Message from user process.
+%%
+%% @end
+%%--------------------------------------------------------------------
+
+get_latest_message(UserId) ->
+    Fun = fun(Pid) -> 
+                  {ok, MessageList} = 
+                      message_box2_worker:get_sent_timeline(Pid, UserId, 1), 
+                  
+                  case length(MessageList) of
+                      0 -> nil;
+                      _ -> lists:nth(1, MessageList)
+                  end
+          end,
+    message_box2_worker_spawner:spawn_do(Fun).
+    
 
 %%--------------------------------------------------------------------
 %% @doc
