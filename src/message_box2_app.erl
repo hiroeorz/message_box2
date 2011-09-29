@@ -14,8 +14,6 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    message_box2_config:load(),
-
     case node() of
 	nonode@nohost -> ok;
 	Node -> 

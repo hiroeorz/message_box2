@@ -190,7 +190,12 @@ basic_test_() ->
 %%%===================================================================
 
 base_setup() ->
-    message_box2_config:load(),
+    {ThisFile, _} = filename:find_src(?MODULE),
+    TestDir = filename:dirname(ThisFile),
+    ConfFilePath = filename:absname_join(TestDir, 
+                                         "../test/message_box2_test.conf"),
+    message_box2_config:load(ConfFilePath),
+
     mnesia:create_schema([node()]),
     mnesia:start(),
     mnesia:create_table(user, [{ram_copies, [node()]}, 
@@ -203,7 +208,6 @@ base_setup() ->
                                  {index, [id]}]),
     mmysql:init_for_test(),
     message_box2_sup:start_link().
-        
 
 % future use.
 create_many_users(0) -> ok;

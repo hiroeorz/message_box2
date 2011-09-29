@@ -42,13 +42,7 @@ init([]) ->
     WorkerSpawner = {message_box2_worker_spawner, 
                      {message_box2_worker_spawner, start_link, []},
                      permanent, 2000, worker, [message_box2_worker_spawner]},
-    
-    BootList = case message_box2_config:get(type) of
-                   master -> 
-                       [MUserSup, WorkerSpawner];
-                   slave ->
-                       [MUserSup, WorkerSpawner]
-               end,        
 
+    BootList = [MUserSup, WorkerSpawner],
     {ok, { SupFlags, BootList } }.
 

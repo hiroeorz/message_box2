@@ -8,5 +8,11 @@
                   stdlib
                  ]},
   {mod, { message_box2_app, []}},
-  {env, []}
+  {env, [
+    {database_dir, "/var/message_box2/db/"},
+    {node_list, ['message_box']},
+    {ruby_port, 0},
+    {cookie, cookie1234},
+    {message_max_size_on_memory, 100}
+  ]}
  ]}.

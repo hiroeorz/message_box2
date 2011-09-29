@@ -39,12 +39,6 @@ boot:
                  -boot start_sasl \
                  -s $(APP_NAME) start
 
-boot_test:
-	@ mkdir -p $(DB_DIR)
-	@ $(ERL) -pa $(BEAMDIR) -sname $(APP_NAME) \
-                 -boot start_sasl \
-                 -s $(APP_NAME) start
-
 boot_client:
 	@ $(ERL) -pa $(BEAMDIR) -sname $(CLIENT_NAME) \
                  -setcookie cookie1234
